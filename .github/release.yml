@@ -45,6 +45,6 @@ jobs:
       - name: Upload bundle to release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/*
+          files: dist/*,hacs.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
