@@ -1,5 +1,10 @@
+└── .github/
+    ├── publish-zip.yml
+    ├── release.yml
 ├── .gitignore
+├── .releaserc
 ├── AUTHORS.md
+├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── LICENSE
 ├── README.md
@@ -117,9 +122,12 @@
     ├── s-tropical-storm.svg
     ├── s-unknown.svg
     ├── s-wind.svg
-├── meteocat-card-editor.js
 ├── package-lock.json
 ├── package.json
 ├── rollup.config.js
+└── scripts/
+    ├── update_version.sh
 └── src/
+    ├── loader.js
+    ├── meteocat-card-editor.js
     ├── meteocat-card.js
