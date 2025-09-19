@@ -2,6 +2,7 @@ class MeteocatCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    this.config = {};
   }
 
   setConfig(config) {
@@ -31,15 +32,15 @@ class MeteocatCardEditor extends HTMLElement {
       <div class="editor">
         <div>
           <label>Weather entity:</label>
-          <input type="text" .value="${entity}" id="entityInput">
+          <input type="text" id="entityInput" value="${entity}">
         </div>
         <div>
           <label>Feels like entity:</label>
-          <input type="text" .value="${feelsLike}" id="feelsLikeInput">
+          <input type="text" id="feelsLikeInput" value="${feelsLike}">
         </div>
         <div>
           <label>Icons path (opcional):</label>
-          <input type="text" .value="${iconPath}" id="iconPathInput">
+          <input type="text" id="iconPathInput" value="${iconPath}">
         </div>
         <div>
           <label>
@@ -50,34 +51,44 @@ class MeteocatCardEditor extends HTMLElement {
       </div>
     `;
 
-    // Eventos de cambio
-    this.shadowRoot.querySelector("#entityInput").addEventListener("change", e => {
+    // Agregar listeners
+    this._attachListeners();
+  }
+
+  _attachListeners() {
+    const entityInput = this.shadowRoot.querySelector("#entityInput");
+    const feelsLikeInput = this.shadowRoot.querySelector("#feelsLikeInput");
+    const iconPathInput = this.shadowRoot.querySelector("#iconPathInput");
+    const staticIconsCheckbox = this.shadowRoot.querySelector("#staticIconsCheckbox");
+
+    entityInput.addEventListener("input", (e) => {
       this.config.entity = e.target.value;
       this._fireChange();
     });
 
-    this.shadowRoot.querySelector("#feelsLikeInput").addEventListener("change", e => {
+    feelsLikeInput.addEventListener("input", (e) => {
       this.config.feels_like_entity = e.target.value;
       this._fireChange();
     });
 
-    this.shadowRoot.querySelector("#iconPathInput").addEventListener("change", e => {
+    iconPathInput.addEventListener("input", (e) => {
       this.config.icons = e.target.value;
       this._fireChange();
     });
 
-    this.shadowRoot.querySelector("#staticIconsCheckbox").addEventListener("change", e => {
+    staticIconsCheckbox.addEventListener("change", (e) => {
       this.config.option_static_icons = e.target.checked;
       this._fireChange();
     });
   }
 
   _fireChange() {
-    const event = new Event("config-changed", { bubbles: true, composed: true });
-    event.detail = { config: this.config };
-    this.dispatchEvent(event);
+    this.dispatchEvent(new CustomEvent("config-changed", {
+      detail: { config: this.config },
+      bubbles: true,
+      composed: true
+    }));
   }
 }
 
-// Registrar el editor
 customElements.define("meteocat-card-editor", MeteocatCardEditor);
