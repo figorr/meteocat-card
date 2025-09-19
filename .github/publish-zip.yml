@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 2️⃣ Instalar Node.js y dependencias (para npm run build si fuese necesario)
+      # 2️⃣ Instalar Node.js y dependencias (por si necesitamos rebuild)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -26,24 +26,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 3️⃣ Crear la estructura de carpetas para HACS
+      # 3️⃣ Crear estructura de carpetas para HACS
       - name: Prepare HACS folder structure
         run: |
-          mkdir -p release/meteocat-card
-          cp -r dist/meteocat-card.js release/meteocat-card/
-          cp -r icons release/meteocat-card/
+          rm -rf tmp
+          mkdir -p tmp/meteocat-card
+          cp dist/meteocat-card.js tmp/meteocat-card/
+          cp src/meteocat-card-editor.js tmp/meteocat-card/
+          cp src/loader.js tmp/meteocat-card/
+          cp -r icons tmp/meteocat-card/
 
       # 4️⃣ Crear ZIP final con la estructura que HACS espera
       - name: Create ZIP
         run: |
-          cd release
-          zip -r meteocat-card.zip meteocat-card
-          echo "ZIP created at release/meteocat-card.zip"
+          cd tmp
+          zip -r ../meteocat-card.zip meteocat-card
+          cd ..
+          echo "ZIP created at $PWD/meteocat-card.zip"
 
       # 5️⃣ Subir el ZIP como asset al release
       - name: Upload ZIP to release
         uses: softprops/action-gh-release@v1
         with:
-          files: release/meteocat-card.zip
+          files: meteocat-card.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
