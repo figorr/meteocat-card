@@ -41,10 +41,10 @@ jobs:
       - name: Build meteocat-card.js
         run: npm run build
 
-      # Crear release en GitHub incluyendo dist/meteocat-card.js
+      # Subir todos los archivos compilados al release
       - name: Upload bundle to release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/meteocat-card.js
+          files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
