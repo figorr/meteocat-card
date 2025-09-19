@@ -1,3 +1,5 @@
+import "./meteocat-card-editor.js";
+
 class MeteocatCard extends HTMLElement {
   constructor() {
     super();
