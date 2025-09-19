@@ -1,0 +1,28 @@
+{
+  "name": "meteocat-card",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Custom Lovelace card for Home Assistant to display Meteocat weather data",
+  "main": "dist/meteocat-card.js",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "lint": "eslint src/**/*.js",
+    "test": "echo \"No tests yet\" && exit 0",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "custom-card",
+    "meteocat",
+    "weather"
+  ],
+  "author": "figorr",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.0",
+    "eslint": "^8.49.0",
+    "rollup": "^3.29.5"
+  }
+}
