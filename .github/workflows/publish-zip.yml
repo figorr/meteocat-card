@@ -14,22 +14,24 @@ jobs:
       contents: write
 
     steps:
+      # 1️⃣ Checkout completo con tags
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          fetch-tags: true
 
+      # 2️⃣ Configurar Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
 
+      # 3️⃣ Instalar dependencias
       - name: Install dependencies
         run: npm ci
 
-      - name: Build meteocat-card.js
-        run: npm run build
-
+      # 4️⃣ Crear estructura HACS
       - name: Prepare HACS folder structure
         run: |
           rm -rf tmp
@@ -39,6 +41,7 @@ jobs:
           cp -r icons tmp/meteocat-card/
           cp hacs.json tmp/meteocat-card/
 
+      # 5️⃣ Crear ZIP final
       - name: Create ZIP
         run: |
           cd tmp
@@ -46,9 +49,23 @@ jobs:
           cd ..
           echo "ZIP created at $PWD/meteocat-card.zip"
 
+      # 6️⃣ Obtener el último release publicado por semantic-release
+      - name: Get latest release tag
+        id: get_release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const latestRelease = await github.rest.repos.getLatestRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            return latestRelease.data.tag_name;
+
+      # 7️⃣ Subir ZIP al release
       - name: Upload ZIP to release
         uses: softprops/action-gh-release@v1
         with:
           files: meteocat-card.zip
+          tag_name: ${{ steps.get_release.outputs.result }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
