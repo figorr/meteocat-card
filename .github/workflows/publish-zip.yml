@@ -49,7 +49,7 @@ jobs:
           cd ..
           echo "ZIP created at $PWD/meteocat-card.zip"
 
-      # 7️⃣ Subir ZIP como asset al release
+      # 7️⃣ Subir ZIP como asset al release creado
       - name: Upload ZIP to release
         uses: softprops/action-gh-release@v1
         with:
