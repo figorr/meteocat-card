@@ -1,11 +1,14 @@
 name: Publish ZIP
 
 on:
-  release:
-    types: [created, published]
+  workflow_run:
+    workflows: ["Build & Release"]
+    types:
+      - completed
 
 jobs:
   publish-zip:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
