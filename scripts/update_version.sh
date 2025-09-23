@@ -4,7 +4,7 @@ set -euo pipefail
 version="$1"
 
 # Si la variable HA_VERSION no está definida, se asigna un valor por defecto
-: "${HA_VERSION:=2025.9.23}"
+: "${HA_VERSION:=2025.9.3}"
 
 echo "Actualizando archivos a la versión $version y HA $HA_VERSION"
 

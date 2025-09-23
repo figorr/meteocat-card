@@ -13,7 +13,6 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-
     steps:
       # 1️⃣ Checkout completo
       - name: Checkout repository
@@ -31,25 +30,39 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 4️⃣ Configurar Git author
+      # 4️⃣ Build del bundle
+      - name: Build meteocat-card.js
+        run: npm run build
+
+      # 5️⃣ Configurar Git author para semantic-release
       - name: Configure Git author
         run: |
           git config user.name "semantic-release-bot"
           git config user.email "jdcuartero@yahoo.es"
 
-      # 5️⃣ Ejecutar semantic-release
+      # 6️⃣ Ejecutar semantic-release
       - name: Run semantic-release
-        id: semantic
+        id: semantic_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
-      # 6️⃣ Build del bundle
-      - name: Build meteocat-card.js
-        run: npm run build
+      # 7️⃣ Obtener el tag del release
+      - name: Get release tag
+        id: get_tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LATEST_TAG" ]; then
+            echo "Release tag found: $LATEST_TAG"
+            echo "release_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          else
+            echo "No release tag found"
+            echo "release_tag=" >> $GITHUB_OUTPUT
+          fi
 
-      # 7️⃣ Crear ZIP para HACS
-      - name: Prepare HACS ZIP
+      # 8️⃣ Crear estructura de carpetas HACS
+      - name: Prepare HACS folder structure
+        if: steps.get_tag.outputs.release_tag != ''
         run: |
           rm -rf tmp
           mkdir -p tmp/meteocat-card
@@ -57,15 +70,22 @@ jobs:
           cp dist/meteocat-card-editor.js tmp/meteocat-card/
           cp -r icons tmp/meteocat-card/
           cp hacs.json tmp/meteocat-card/
+
+      # 9️⃣ Crear ZIP final
+      - name: Create ZIP
+        if: steps.get_tag.outputs.release_tag != ''
+        run: |
           cd tmp
           zip -r ../meteocat-card.zip meteocat-card
           cd ..
           echo "ZIP created at $PWD/meteocat-card.zip"
 
-      # 8️⃣ Subir ZIP al release recién creado
+      # 10️⃣ Subir ZIP como asset al release
       - name: Upload ZIP to release
-        run: |
-          echo "Uploading ZIP to release $GITHUB_REF_NAME"
-          gh release upload "$GITHUB_REF_NAME" meteocat-card.zip --repo $GITHUB_REPOSITORY --clobber
+        if: steps.get_tag.outputs.release_tag != ''
+        uses: softprops/action-gh-release@v1
+        with:
+          files: meteocat-card.zip
+          tag_name: ${{ steps.get_tag.outputs.release_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

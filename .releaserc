@@ -24,10 +24,10 @@
       "@semantic-release/github",
       {
         "assets": [
-          { "path": "dist/meteocat-card.js", "label": "Meteocat Card JS" },
-          { "path": "dist/meteocat-card-editor.js", "label": "Meteocat Card Editor JS" },
-          { "path": "icons/*", "label": "Icons" },
-          { "path": "hacs.json", "label": "HACS metadata" }
+          "dist/meteocat-card.js",
+          "dist/meteocat-card-editor.js",
+          "icons/*",
+          "hacs.json"
         ]
       }
     ]
