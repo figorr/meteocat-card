@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 4️⃣ Configurar Git author para semantic-release
+      # 4️⃣ Configurar Git author
       - name: Configure Git author
         run: |
           git config user.name "semantic-release-bot"
@@ -42,6 +42,32 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
-      # 6️⃣ Build del bundle
-      - name: Build meteocat-card.js
+      # 6️⃣ Build de los archivos
+      - name: Build meteocat-card
         run: npm run build
+
+      # 7️⃣ Crear estructura HACS temporal para el ZIP
+      - name: Prepare HACS folder structure
+        run: |
+          rm -rf tmp
+          mkdir -p tmp/meteocat-card
+          cp dist/meteocat-card.js tmp/meteocat-card/
+          cp dist/meteocat-card-editor.js tmp/meteocat-card/
+          cp -r icons tmp/meteocat-card/
+          cp hacs.json tmp/meteocat-card/
+
+      # 8️⃣ Crear ZIP final
+      - name: Create ZIP
+        run: |
+          cd tmp
+          zip -r ../meteocat-card.zip meteocat-card
+          cd ..
+          echo "ZIP created at $PWD/meteocat-card.zip"
+
+      # 9️⃣ Subir ZIP como asset al release
+      - name: Upload ZIP to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: meteocat-card.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
