@@ -6,6 +6,10 @@ on:
       - .github/labels.yml
   workflow_dispatch:
 
+permissions:
+  issues: write   # necesario para crear/actualizar labels
+  contents: read  # para poder leer archivos del repo
+
 jobs:
   labels:
     runs-on: ubuntu-latest
@@ -17,5 +21,5 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           yaml-file: .github/labels.yml
-          skip-delete: true   # no elimina labels que no estén en el YAML
-          dry-run: false      # aplica cambios realmente
+          skip-delete: true
+          dry-run: false
