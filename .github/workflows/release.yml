@@ -37,15 +37,12 @@ jobs:
           git config user.name "semantic-release-bot"
           git config user.email "jdcuartero@yahoo.es"
 
-      # 5️⃣ Ejecutar semantic-release y obtener la nueva versión
+      # 5️⃣ Ejecutar semantic-release
       - name: Run semantic-release
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npx semantic-release
-          # Guardamos la versión recién publicada en un archivo temporal
-          echo "VERSION=$(npx semantic-release --dry-run | grep 'The next release version is' | awk '{print $NF}')" >> $GITHUB_ENV
+        run: npx semantic-release
 
       # 6️⃣ Build del bundle
       - name: Build meteocat-card.js
@@ -68,7 +65,7 @@ jobs:
       # 8️⃣ Subir ZIP al release recién creado
       - name: Upload ZIP to release
         run: |
-          echo "Uploading ZIP to release v$VERSION"
-          gh release upload "v$VERSION" meteocat-card.zip --repo $GITHUB_REPOSITORY --clobber
+          echo "Uploading ZIP to release $GITHUB_REF_NAME"
+          gh release upload "$GITHUB_REF_NAME" meteocat-card.zip --repo $GITHUB_REPOSITORY --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

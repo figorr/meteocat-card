@@ -16,11 +16,21 @@
     [
       "@semantic-release/git",
       {
-        "assets": ["CHANGELOG.md", "package.json", "package-lock.json"],
+        "assets": ["CHANGELOG.md", "package.json", "package-lock.json", "hacs.json"],
         "message": "chore(release): v${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
-    "@semantic-release/github"
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "dist/meteocat-card.js", "label": "Meteocat Card JS" },
+          { "path": "dist/meteocat-card-editor.js", "label": "Meteocat Card Editor JS" },
+          { "path": "icons/*", "label": "Icons" },
+          { "path": "hacs.json", "label": "HACS metadata" }
+        ]
+      }
+    ]
   ],
   "repositoryUrl": "https://github.com/figorr/meteocat-card"
 }
