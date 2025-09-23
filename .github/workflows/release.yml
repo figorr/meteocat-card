@@ -5,7 +5,6 @@ on:
     branches:
       - master
 
-# 🔹 Permisos explícitos para que semantic-release pueda empujar commits y tags
 permissions:
   contents: write
   actions: read
@@ -19,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # necesario para tags y releases
+          fetch-depth: 0
 
       # 2️⃣ Configurar Node.js
       - name: Setup Node.js
@@ -40,20 +39,9 @@ jobs:
       # 5️⃣ Ejecutar semantic-release
       - name: Run semantic-release
         env:
-          # 🔹 GITHUB_TOKEN con permisos 'write'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 🔹 Variable para el script update_version.sh
-          ha_version: "2025.9.23"  
         run: npx semantic-release
 
       # 6️⃣ Build del bundle
       - name: Build meteocat-card.js
         run: npm run build
-
-      # 7️⃣ Subir todos los archivos compilados al release
-      - name: Upload bundle to release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/*,icons/*,hacs.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

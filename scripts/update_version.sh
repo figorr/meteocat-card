@@ -1,22 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Recibe la nueva versión como primer argumento
 version="$1"
 
-# Comprueba que la variable de entorno ha_version esté definida
-if [ -z "${ha_version:-}" ]; then
-  echo "Error: la variable de entorno ha_version no está definida."
-  exit 1
-fi
+# Si la variable HA_VERSION no está definida, se asigna un valor por defecto
+: "${HA_VERSION:=2025.9.23}"
 
-# Actualizar package.json
+echo "Actualizando archivos a la versión $version y HA $HA_VERSION"
+
+# 1️⃣ Actualizar package.json
 jq --arg ver "$version" '.version = $ver' package.json > tmp.json && mv tmp.json package.json
 
-# Actualizar package-lock.json
+# 2️⃣ Actualizar package-lock.json
 jq --arg ver "$version" '.version = $ver | .packages[""].version = $ver' package-lock.json > tmp.json && mv tmp.json package-lock.json
 
-# Actualizar hacs.json con la versión de Home Assistant
-jq --arg ver "$ha_version" '.homeassistant = $ver' hacs.json > tmp.json && mv tmp.json hacs.json
+# 3️⃣ Actualizar hacs.json
+jq --arg ver "$HA_VERSION" '.homeassistant = $ver' hacs.json > tmp.json && mv tmp.json hacs.json
 
-echo "Archivos actualizados a la versión $version y HA $ha_version"
+echo "Archivos actualizados correctamente."

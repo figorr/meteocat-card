@@ -2,7 +2,7 @@ name: Publish ZIP
 
 on:
   release:
-    types: [published]
+    types: [created, published]
 
 jobs:
   publish-zip:
@@ -11,22 +11,23 @@ jobs:
       contents: write
 
     steps:
-      # 1️⃣ Checkout del repo completo
+      # 1️⃣ Checkout completo
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      # 2️⃣ Instalar Node.js y dependencias (por si necesitamos rebuild)
+      # 2️⃣ Configurar Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
 
+      # 3️⃣ Instalar dependencias
       - name: Install dependencies
         run: npm ci
 
-      # 3️⃣ Crear estructura de carpetas para HACS
+      # 4️⃣ Crear estructura de carpetas HACS
       - name: Prepare HACS folder structure
         run: |
           rm -rf tmp
@@ -36,7 +37,7 @@ jobs:
           cp -r icons tmp/meteocat-card/
           cp hacs.json tmp/meteocat-card/
 
-      # 4️⃣ Crear ZIP final con la estructura que HACS espera
+      # 5️⃣ Crear ZIP final
       - name: Create ZIP
         run: |
           cd tmp
@@ -44,7 +45,7 @@ jobs:
           cd ..
           echo "ZIP created at $PWD/meteocat-card.zip"
 
-      # 5️⃣ Subir el ZIP como asset al release
+      # 6️⃣ Subir ZIP como asset al release
       - name: Upload ZIP to release
         uses: softprops/action-gh-release@v1
         with:
