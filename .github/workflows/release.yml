@@ -40,11 +40,13 @@ jobs:
       # 5️⃣ Ejecutar semantic-release
       - name: Run semantic-release
         env:
-          # 🔹 Aquí se usa el GITHUB_TOKEN del runner, ya con permisos 'write' declarados arriba
+          # 🔹 GITHUB_TOKEN con permisos 'write'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 🔹 Variable para el script update_version.sh
+          ha_version: "2025.9.23"  
         run: npx semantic-release
 
-      # 6️⃣ Build del bundle (opcional, si quieres subir archivos compilados)
+      # 6️⃣ Build del bundle
       - name: Build meteocat-card.js
         run: npm run build
 
