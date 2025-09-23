@@ -1,6 +1,6 @@
 {
   "name": "meteocat-card",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "Custom Lovelace card for Home Assistant to display Meteocat weather data",
   "main": "dist/meteocat-card.js",
