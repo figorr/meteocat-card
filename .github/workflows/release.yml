@@ -13,6 +13,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+
     steps:
       # 1️⃣ Checkout completo
       - name: Checkout repository
@@ -36,18 +37,22 @@ jobs:
           git config user.name "semantic-release-bot"
           git config user.email "jdcuartero@yahoo.es"
 
-      # 5️⃣ Ejecutar semantic-release
+      # 5️⃣ Ejecutar semantic-release y obtener la nueva versión
       - name: Run semantic-release
+        id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+        run: |
+          npx semantic-release
+          # Guardamos la versión recién publicada en un archivo temporal
+          echo "VERSION=$(npx semantic-release --dry-run | grep 'The next release version is' | awk '{print $NF}')" >> $GITHUB_ENV
 
-      # 6️⃣ Build de los archivos
-      - name: Build meteocat-card
+      # 6️⃣ Build del bundle
+      - name: Build meteocat-card.js
         run: npm run build
 
-      # 7️⃣ Crear estructura HACS temporal para el ZIP
-      - name: Prepare HACS folder structure
+      # 7️⃣ Crear ZIP para HACS
+      - name: Prepare HACS ZIP
         run: |
           rm -rf tmp
           mkdir -p tmp/meteocat-card
@@ -55,19 +60,15 @@ jobs:
           cp dist/meteocat-card-editor.js tmp/meteocat-card/
           cp -r icons tmp/meteocat-card/
           cp hacs.json tmp/meteocat-card/
-
-      # 8️⃣ Crear ZIP final
-      - name: Create ZIP
-        run: |
           cd tmp
           zip -r ../meteocat-card.zip meteocat-card
           cd ..
           echo "ZIP created at $PWD/meteocat-card.zip"
 
-      # 9️⃣ Subir ZIP como asset al release creado
+      # 8️⃣ Subir ZIP al release recién creado
       - name: Upload ZIP to release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: meteocat-card.zip
+        run: |
+          echo "Uploading ZIP to release v$VERSION"
+          gh release upload "v$VERSION" meteocat-card.zip --repo $GITHUB_REPOSITORY --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
