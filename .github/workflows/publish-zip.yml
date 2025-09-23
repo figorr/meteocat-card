@@ -32,10 +32,9 @@ jobs:
           rm -rf tmp
           mkdir -p tmp/meteocat-card
           cp dist/meteocat-card.js tmp/meteocat-card/
-          cp src/meteocat-card-editor.js tmp/meteocat-card/
-          cp src/loader.js tmp/meteocat-card/
+          cp dist/meteocat-card-editor.js tmp/meteocat-card/
           cp -r icons tmp/meteocat-card/
-          cp hacs.json release/meteocat-card/
+          cp hacs.json tmp/meteocat-card/
 
       # 4️⃣ Crear ZIP final con la estructura que HACS espera
       - name: Create ZIP

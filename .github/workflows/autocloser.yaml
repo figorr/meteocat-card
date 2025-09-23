@@ -1,0 +1,27 @@
+name: Autocloser
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+jobs:
+  autoclose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Autoclose issues that did not follow any template
+        uses: roots/issue-closer@v1.1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-close-message: >
+            👋 @${{ github.event.issue.user.login }} this issue was automatically closed because it did not follow any of the required templates.
+
+            ⚠️ Reminder:
+            - Use the [🐞 Bug report template](https://github.com/figorr/meteocat-card/issues/new?template=bug_report.md) for errors or malfunctions.  
+            - Use the [♻️ Improvement request template](https://github.com/figorr/meteocat-card/issues/new?template=improvement.md) for changes to current behavior.  
+            - Use the [🆕 New function template](https://github.com/figorr/meteocat-card/issues/new?template=new_function.md) for new card features.  
+
+            The template is mandatory; failure to use it will result in issue closure.
+          issue-pattern: >
+            (### Describe the bug|### To Reproduce|### Expected behavior|### System details|### Debug Logs|
+            I confirm this is not a bug or malfunction, but a request for improvement|
+            I have verified that the requested data is available)

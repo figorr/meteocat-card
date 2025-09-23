@@ -1,9 +1,9 @@
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
-import { terser } from "rollup-plugin-terser"; // Usamos import por defecto
+import terser from "@rollup/plugin-terser";
 
 export default [
-  // Meteocat Card
+  // Bundle para la tarjeta Meteocat
   {
     input: "src/meteocat-card.js",
     output: {
@@ -11,14 +11,15 @@ export default [
       format: "es",
       sourcemap: false,
     },
+    external: [], // No dependencias externas
     plugins: [
-      resolve(),
+      resolve({ browser: true }),
       commonjs(),
-      terser(), // minimiza el JS
+      terser(), // minificación opcional
     ],
   },
 
-  // Editor de la card
+  // Bundle para el editor de la tarjeta
   {
     input: "src/meteocat-card-editor.js",
     output: {
@@ -26,25 +27,11 @@ export default [
       format: "es",
       sourcemap: false,
     },
+    external: [], // Sin dependencias externas
     plugins: [
-      resolve(),
+      resolve({ browser: true }),
       commonjs(),
-      terser(),
+      terser(), // minificación opcional
     ],
-  },
-
-  // Loader para instalación manual
-  {
-    input: "src/loader.js",
-    output: {
-      file: "dist/loader.js",
-      format: "es",
-      sourcemap: false,
-    },
-    plugins: [
-      resolve(),
-      commonjs(),
-      terser(),
-    ],
-  },
+  }
 ];

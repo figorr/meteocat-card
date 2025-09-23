@@ -1,34 +1,70 @@
 # 🌤️ Meteocat Card
+![Meteocat Banner](images/banner.png)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![JavaScript](https://img.shields.io/badge/language-JavaScript-yellow)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/plugin)
+[![Validate](https://github.com/figorr/meteocat-card/actions/workflows/validate.yaml/badge.svg)](https://github.com/figorr/meteocat-card/actions/workflows/validate.yaml)
+[![Release](https://github.com/figorr/meteocat-card/actions/workflows/release.yml/badge.svg)](https://github.com/figorr/meteocat-card/actions/workflows/release.yml)
+![GitHub all releases](https://img.shields.io/github/downloads/figorr/meteocat-card/total)
+![GitHub release](https://img.shields.io/github/downloads/figorr/meteocat-card/latest/total)
+![Latest release](https://img.shields.io/github/v/release/figorr/meteocat-card?label=latest)
 
 Custom Lovelace card for Home Assistant to display weather data from the [Meteocat integration](https://github.com/figorr/meteocat).  
 Supports animated or static icons with day/night variants, and shows hourly and daily forecasts.
 
 ## Installation
 
-### HACS (recommended)
-1. Go to **HACS → Frontend → Custom repositories**.
-2. Add this repository: https://github.com/figorr/meteocat-card
-3. Install **Meteocat Card** from HACS.
+### HACS (From the Store) - Not available yet
+
+1. Open **HACS**.  
+2. Search for **Meteocat Card** and install it.
+3. Refresh the Lovelace
 
 ### Manual
-1. Copy the compiled file `dist/meteocat-card.js` to your Home Assistant `www` folder, preferably in a subfolder for organization:
+1. Copy the compiled file `meteocat-card.js` and `meteocat-card-editor.js` to your Home Assistant `www` folder, preferably in a subfolder for organization:
    
    ```text
    /config/www/meteocat-card/meteocat-card.js
+   /config/www/meteocat-card/meteocat-card-editor.js
    ```
 
-2. Add the resource to your Lovelace configuration:
+2. Place the icon SVGs that are located in /www/meteocat-card/icons into your Home Assistant setup at:
+
+   ```text
+   /config/www/meteocat-card/icons/
+   ```
+
+3. Add the resource to your Lovelace configuration:
+
+   Go to **Settings > Dashboards > Resources > Add Resource**
 
    ```yaml
    url: /local/meteocat-card/meteocat-card.js
    type: module
    ```
 
-3. Place the icon SVGs that are located in /www/meteocat-card/icons into your Home Assistant setup at:
+   ![Meteocat Card resources menu](images/resources_menu.png)
 
-   ```text
-   /config/www/meteocat-card/icons/
-   ```
+   ![Meteocat Card add resource](images/resources_add.png)
+
+4. Refresh or hard refresh your web browser.
+
+   #### To perform a refresh
+   ##### - On Windows and Linux
+   - Ctrl + F5
+     : This is the universal shortcut for a hard refresh in most browsers. 
+   - Ctrl + Shift + R
+     : This is another common shortcut for a hard refresh. 
+   - Ctrl + Click the Reload Button
+     : You can hold the Ctrl key and click the browser's reload icon to achieve the same result.
+
+   ##### - On Mac
+   - Command + Shift + R
+     : For Chrome, Firefox, and Edge, use this shortcut to force a refresh. 
+   - Shift + Click the Reload Button
+     : In Safari, you can hold the Shift key and click the reload icon to bypass the cache. 
+   - Command + Option + E then Reload
+     : For a hard refresh in Safari, first press Command + Option + E to empty the cache, then click the Reload button in the toolbar.  
 
 ## Icon Setup
 
@@ -42,26 +78,26 @@ Example icons:
 ```css
 a-clear-day.svg
 a-clear-night.svg
-s-rain-day.svg
-s-rain-night.svg
+s-rainy-day.svg
+s-rainy-night.svg
 ```
 
-## Usage
+## Configuration
 
-### Using a Meteocat Weather Entity (Recommended)
+### Using your Meteocat Weather Entity
 
 Use your Meteocat Weather entity to get full functionality including current conditions, hourly and daily forecasts:
 
    ```yaml
    type: custom:meteocat-card
    entity: weather.meteocat_station_id_weather_town_name
+   sunrise_entity: sensor.sun_next_rising
+   sunset_entity: sensor.sun_next_setting
    option_static_icons: false  # set true for static icons
-   icons: "/local/meteocat-card/icons/"
    ```
 
    - entity: Your Meteocat Weather entity (e.g., weather.meteocat_yourtown)
    - option_static_icons: true for static icons, false for animated icons
-   - icons: Base path to your SVG icons
 
 The card automatically selects the correct icon based on the current condition and time of day.
 
@@ -70,42 +106,34 @@ The card automatically selects the correct icon based on the current condition a
    ```yaml
    type: custom:meteocat-card
    entity: weather.meteocat_station_id_weather_town_name
+   sunrise_entity: sensor.sun_next_rising
+   sunset_entity: sensor.sun_next_setting
    option_static_icons: false
-   icons: "/local/meteocat-card/icons/"
    ```
 
    **The card shows:**
 
    - Current weather condition and icon
-   - Temperature, humidity, wind speed, and precipitation
-   - Hourly forecast with temperature and precipitation bars
-   - Daily forecast with min/max temperatures and precipitation
+   - Temperature, humidity, pressure, wind speed, bearing, gust, precipitation, precipitation probability, uv index, sunset* and sunrise*
+   - Daily forecast
+   - Hourly forecast
 
-### Using Individual Meteocat Sensors
-
-You can also use individual sensors with the card, for example:
-
-```yaml
-type: custom:meteocat-card
-entity: sensor.meteocat_station_id_town_name_temperatura
-```
-
-Replace sensor.meteocat_temperature with any other sensor from your Meteocat integration (humidity, wind speed, precipitation, UV index, etc.).
-
-Note: Using the Weather entity is recommended to get the full forecast display.
+   Note: For sunset and sunrise you must setup the **Sun integration** and choice your `sunrise_entity: sensor.sun_next_rising` and your `sunset_entity: sensor.sun_next_setting`
 
 ## Configuration Options
 
-| Option               | Type    | Default           | Description                                                   |
-|----------------------|--------|-----------------|---------------------------------------------------------------|
-| `entity`             | string | —               | **Required.** Your Meteocat weather entity or sensor.        |
-| `option_static_icons`| boolean| `false`         | Use static icons (`true`) or animated icons (`false`).        |
-| `icons`              | string | `/local/icons/` | Path to the folder containing the SVG icons.                 |
+| Option               | Type    | Default                  | Description                                            |
+|----------------------|--------|---------------------------|--------------------------------------------------------|
+| `entity`             | string | —                         | **Required.** Your Meteocat weather entity.            |
+| `sunrise_entity`     | string | `sensor.sun_next_rising`  | **Required.** From Sun integration.                    |
+| `sunset_entity`      | string | `sensor.sun_next_setting` | **Required.** From Sun integration.                    |
+| `option_static_icons`| boolean| `false`                   | Use static icons (`true`) or animated icons (`false`). |
+| `icons`              | string | `/local/icons/`           | Path to the folder containing the SVG icons.           |
 
 ## Notes
 
 - Make sure your Meteocat integration provides a Weather entity (not just individual sensors) to get full card functionality.
-- The card dynamically determines day or night icons if the entity’s condition is not clear-night.
+- The card dynamically determines day or night icons.
 - For best results, keep your /config/www/meteocat-card/icons/ folder updated with the latest icons from the repo.
 
 ## Examples
@@ -114,7 +142,10 @@ Note: Using the Weather entity is recommended to get the full forecast display.
 
 ```yaml
 type: custom:meteocat-card
-entity: sensor.meteocat_station_id_town_name_temperatura
+entity: weather.meteocat_station_id_weather_town_name
+sunrise_entity: sensor.sun_next_rising
+sunset_entity: sensor.sun_next_setting
+option_static_icons: false
 ```
 
 ### Using Animated Icons
@@ -122,8 +153,9 @@ entity: sensor.meteocat_station_id_town_name_temperatura
 ```yaml
 type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
+sunrise_entity: sensor.sun_next_rising
+sunset_entity: sensor.sun_next_setting
 option_static_icons: false
-icons: "/local/meteocat-card/icons/"
 ```
 
 ### Using Static Icons
@@ -131,26 +163,47 @@ icons: "/local/meteocat-card/icons/"
 ```yaml
 type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
+sunrise_entity: sensor.sun_next_rising
+sunset_entity: sensor.sun_next_setting
 option_static_icons: true
-icons: "/local/meteocat-card/icons/"
 ```
 
 ### Example Display
 
 #### Current Weather:
 
-#### Hourly Forecast:
+(a) No alerts
+
+![Meteocat Card current weather no alerts](images/current_example_no_alerts.png)
+
+(b) 1 alert
+
+![Meteocat Card current weather no alerts](images/current_example_1_alert.png)
+
+(c) 2 alerts
+
+![Meteocat Card current weather no alerts](images/current_example_2_alerts.png)
 
 #### Daily Forecast:
 
+![Meteocat Card current weather with alerts](images/daily_forecast_2_alerts.png)
+
+#### Hourly Forecast:
+
+![Meteocat Card current weather with alerts](images/houryly_forecast_2_alerts.png)
+
 ## Features
 
-- ✅ Display temperature, humidity, wind speed, and precipitation
+- ✅ Display temperature, humidity, wind speed, and precipitation among other
 - ✅ Shows a weather icon according to the condition and time of day
 - ✅ Supports animated (a-) or static (s-) icons
 - ✅ Displays hourly and daily forecasts when using a Weather entity
 - 🚧 Lightweight and compatible with Home Assistant 2025+
 - 🛠️ Early stage — more features will be added (styling, additional forecasts, etc.)
+
+## Uninstalling Meteocat Card
+
+To remove the Meteocat Card follow the guidelines from Wiki [Uninstallation](https://github.com/figorr/meteocat-card/wiki/Uninstallation)
 
 ## Contributing to Meteocat Card
 
@@ -181,6 +234,7 @@ We welcome contributions in any form: bug reports, new features, or improvements
 4. **Start developing**
 
 - The main code is in src/meteocat-card.js.
+- The editor code is in src/meteocat-card-editor.js
 - You can use a local dev server (e.g., npm run watch) to see changes live in Home Assistant.
 
 5. **Lint and test your code**
@@ -192,7 +246,13 @@ We welcome contributions in any form: bug reports, new features, or improvements
 
      Make sure your code passes linting and tests before committing.
 
-6. **Commit your changes**
+6. **Add yourself to `AUTHORS.md`.**
+
+7. **Update `README.md`.** 
+
+     Just update the `README.md` with any new documentation if your development includes new features for the card.
+
+7. **Commit your changes**
 
      ```bash
      git add .
@@ -200,7 +260,7 @@ We welcome contributions in any form: bug reports, new features, or improvements
      git push origin your-branch
      ```
 
-7. **Submit a Pull Request**
+8. **Submit a Pull Request**
 
 - Open a PR from your branch to the master branch of this repository.
 - Describe your changes clearly and link any relevant issues.

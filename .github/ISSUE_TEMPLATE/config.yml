@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Wiki - Troubleshooting
+    url: https://github.com/figorr/meteocat-card/wiki/Troubleshooting
+    about: Please check the Wiki before opening an issue.
+  - name: 💬 Discussions
+    url: https://github.com/figorr/meteocat-card/discussions
+    about: Ask questions, share ideas, or get help from the community.

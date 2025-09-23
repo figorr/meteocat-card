@@ -122,6 +122,7 @@
     ├── s-tropical-storm.svg
     ├── s-unknown.svg
     ├── s-wind.svg
+├── manifest.json
 ├── package-lock.json
 ├── package.json
 ├── rollup.config.js
