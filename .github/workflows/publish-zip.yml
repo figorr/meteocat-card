@@ -1,25 +1,21 @@
 name: Publish ZIP
 
 on:
-  workflow_run:
-    workflows: ["Build & Release"]
-    types:
-      - completed
+  release:
+    types: [created, published]
 
 jobs:
   publish-zip:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      # 1️⃣ Checkout completo con tags
+      # 1️⃣ Checkout completo
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          fetch-tags: true
 
       # 2️⃣ Configurar Node.js
       - name: Setup Node.js
@@ -31,7 +27,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 4️⃣ Crear estructura HACS
+      # 4️⃣ Construir los archivos dist
+      - name: Build bundle
+        run: npm run build
+
+      # 5️⃣ Crear estructura de carpetas HACS
       - name: Prepare HACS folder structure
         run: |
           rm -rf tmp
@@ -41,7 +41,7 @@ jobs:
           cp -r icons tmp/meteocat-card/
           cp hacs.json tmp/meteocat-card/
 
-      # 5️⃣ Crear ZIP final
+      # 6️⃣ Crear ZIP final
       - name: Create ZIP
         run: |
           cd tmp
@@ -49,23 +49,10 @@ jobs:
           cd ..
           echo "ZIP created at $PWD/meteocat-card.zip"
 
-      # 6️⃣ Obtener el último release publicado por semantic-release
-      - name: Get latest release tag
-        id: get_release
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const latestRelease = await github.rest.repos.getLatestRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-            return latestRelease.data.tag_name;
-
-      # 7️⃣ Subir ZIP al release
+      # 7️⃣ Subir ZIP como asset al release
       - name: Upload ZIP to release
         uses: softprops/action-gh-release@v1
         with:
           files: meteocat-card.zip
-          tag_name: ${{ steps.get_release.outputs.result }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
