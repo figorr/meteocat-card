@@ -69,7 +69,6 @@ jobs:
           cp dist/meteocat-card.js tmp/meteocat-card/
           cp dist/meteocat-card-editor.js tmp/meteocat-card/
           cp -r icons tmp/meteocat-card/
-          cp hacs.json tmp/meteocat-card/
 
       # 9️⃣ Crear ZIP final
       - name: Create ZIP
