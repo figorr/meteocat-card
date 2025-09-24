@@ -5,7 +5,7 @@ const translations = {
     card_name: "Meteocat Card",
     card_description: "Custom card to display Meteocat weather data.",
     editor_not_available: "Visual editor not available. Please use the YAML editor.",
-    entity: "Weather entity from Meteocat",
+    entity: "Weather entity",
     sunrise_entity: "Sunrise",
     sunset_entity: "Sunset",
     option_static_icons: "Static icons",
@@ -15,9 +15,9 @@ const translations = {
     card_name: "Tarjeta Meteocat",
     card_description: "Tarjeta personalizada para mostrar datos de clima de Meteocat.",
     editor_not_available: "Editor visual no disponible. Por favor, usa el editor YAML.",
-    entity: "Entidad weather de Meteocat",
-    sunrise_entity: "Salida del sol",
-    sunset_entity: "Puesta de sol",
+    entity: "Weather entidad",
+    sunrise_entity: "Amanecer",
+    sunset_entity: "Atardecer",
     option_static_icons: "Iconos estáticos",
   },
   ca: {
@@ -25,16 +25,16 @@ const translations = {
     card_name: "Targeta Meteocat",
     card_description: "Targeta personalitzada per mostrar dades de clima de Meteocat.",
     editor_not_available: "Editor visual no disponible. Si us plau, usa l'editor YAML.",
-    entity: "Entitat weather de Meteocat",
+    entity: "Weather entitat",
     sunrise_entity: "Sortida del sol",
     sunset_entity: "Posta de sol",
-    option_static_icons: "Usar icones estàtiques",
+    option_static_icons: "Icones estàtiques",
   },
 };
 
 // Helper para obtener traducciones
 function getTranslation(hass, key, params = {}, fallback = key) {
-  const lang = hass?.language || 'en';
+  const lang = hass?.language || "en";
   let text = translations[lang]?.[key] || translations.en[key] || fallback;
   Object.entries(params).forEach(([param, value]) => {
     text = text.replace(`{${param}}`, value);
@@ -60,11 +60,14 @@ class MeteocatCardEditor extends HTMLElement {
       sunset_entity: "sensor.sun_next_setting",
       option_static_icons: false,
       ...config,
-      title: undefined
+      title: undefined,
     };
     delete this._config.title;
     delete this._config.icons;
-    console.log("MeteocatCardEditor: setConfig called with config =", this._config);
+    console.log(
+      "MeteocatCardEditor: setConfig called with config =",
+      this._config
+    );
     this._render();
   }
 
@@ -73,7 +76,9 @@ class MeteocatCardEditor extends HTMLElement {
     if (this._form) this._form.hass = hass;
 
     if (this._hass && this._config.entity && this._hass.states[this._config.entity]) {
-      const friendlyName = this._hass.states[this._config.entity]?.attributes?.friendly_name || this._config.entity;
+      const friendlyName =
+        this._hass.states[this._config.entity]?.attributes?.friendly_name ||
+        this._config.entity;
       console.log("MeteocatCardEditor: friendly_name =", friendlyName);
     }
 
@@ -85,12 +90,12 @@ class MeteocatCardEditor extends HTMLElement {
     this._render();
   }
 
-  _schema(hass) {
+  _schema() {
     return [
-      { name: "entity", selector: { entity: { domain: "weather" } }, label: getTranslation(hass, "entity") },
-      { name: "sunrise_entity", selector: { entity: { domain: "sensor" } }, label: getTranslation(hass, "sunrise_entity") },
-      { name: "sunset_entity", selector: { entity: { domain: "sensor" } }, label: getTranslation(hass, "sunset_entity") },
-      { name: "option_static_icons", selector: { boolean: {} }, label: getTranslation(hass, "option_static_icons") },
+      { name: "entity", selector: { entity: { domain: "weather" } } },
+      { name: "sunrise_entity", selector: { entity: { domain: "sensor" } } },
+      { name: "sunset_entity", selector: { entity: { domain: "sensor" } } },
+      { name: "option_static_icons", selector: { boolean: {} } },
     ];
   }
 
@@ -116,7 +121,7 @@ class MeteocatCardEditor extends HTMLElement {
       console.error("MeteocatCardEditor: ha-form custom element not found");
       const errorDiv = document.createElement("div");
       errorDiv.className = "error";
-      errorDiv.textContent = getTranslation(this._hass, 'editor_not_available');
+      errorDiv.textContent = getTranslation(this._hass, "editor_not_available");
       wrapper.appendChild(errorDiv);
       this.shadowRoot.appendChild(wrapper);
       return;
@@ -132,7 +137,15 @@ class MeteocatCardEditor extends HTMLElement {
         option_static_icons: this._config.option_static_icons,
       };
       form.schema = this._schema(this._hass);
-      form.addEventListener("value-changed", (ev) => this._onFormValueChanged(ev));
+
+      // 👇 Asigna traducciones a los labels
+      form.computeLabel = (schema) => {
+        return getTranslation(this._hass, schema.name);
+      };
+
+      form.addEventListener("value-changed", (ev) =>
+        this._onFormValueChanged(ev)
+      );
       wrapper.appendChild(form);
       this._form = form;
       console.log("MeteocatCardEditor: ha-form created successfully");
@@ -140,7 +153,7 @@ class MeteocatCardEditor extends HTMLElement {
       console.error("MeteocatCardEditor: Error creating ha-form:", error);
       const errorDiv = document.createElement("div");
       errorDiv.className = "error";
-      errorDiv.textContent = getTranslation(this._hass, 'editor_not_available');
+      errorDiv.textContent = getTranslation(this._hass, "editor_not_available");
       wrapper.appendChild(errorDiv);
     }
 
@@ -161,11 +174,13 @@ class MeteocatCardEditor extends HTMLElement {
     const config = { ...this._config };
     delete config.title;
     delete config.icons;
-    this.dispatchEvent(new CustomEvent("config-changed", {
-      detail: { config },
-      bubbles: true,
-      composed: true,
-    }));
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   get value() {
@@ -177,8 +192,12 @@ class MeteocatCardEditor extends HTMLElement {
 }
 
 if (!customElements.get("meteocat-card-editor")) {
-  console.log("MeteocatCardEditor: Registering custom element meteocat-card-editor");
+  console.log(
+    "MeteocatCardEditor: Registering custom element meteocat-card-editor"
+  );
   customElements.define("meteocat-card-editor", MeteocatCardEditor);
 } else {
-  console.log("MeteocatCardEditor: Custom element meteocat-card-editor already defined");
+  console.log(
+    "MeteocatCardEditor: Custom element meteocat-card-editor already defined"
+  );
 }
