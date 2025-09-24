@@ -88,6 +88,18 @@ s-rainy-night.svg
 
 ## Configuration
 
+### Before setting up the Metocat Card for the first time
+
+   You need to have some **sun** sensors, timestamp sensors, that provide sunrise and sunset data.
+
+   The easy way is to install the **sun** integration provided by Home Assistant.
+
+   But you can use your own `device_class` **`timestamp`** sensors.
+
+   ![Meteocat Card sun integration 01](images/sun_integration_01.png)
+
+   ![Meteocat Card sun integration 02](images/sun_integration_02.png)
+
 ### Pick the card
 
    ![Meteocat Card custom cards](images/custom_card_menu.png)
