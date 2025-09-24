@@ -21,20 +21,24 @@ Supports animated or static icons with day/night variants, and shows hourly and 
 3. Refresh the Lovelace
 
 ### Manual
-1. Copy the compiled file `meteocat-card.js` and `meteocat-card-editor.js` to your Home Assistant `www` folder, preferably in a subfolder for organization:
+1. Download the `meteocat-card.zip` file from the latest release. 
+
+2. Unzip the file.
+
+3. Copy the compiled file `meteocat-card.js` and `meteocat-card-editor.js` to your Home Assistant `www` folder, preferably in a subfolder for organization:
    
    ```text
    /config/www/meteocat-card/meteocat-card.js
    /config/www/meteocat-card/meteocat-card-editor.js
    ```
 
-2. Place the icon SVGs that are located in /www/meteocat-card/icons into your Home Assistant setup at:
+4. Place the icon SVGs that are located in /www/meteocat-card/icons into your Home Assistant setup at:
 
    ```text
    /config/www/meteocat-card/icons/
    ```
 
-3. Add the resource to your Lovelace configuration:
+5. Add the resource to your Lovelace configuration:
 
    Go to **Settings > Dashboards > Resources > Add Resource**
 
@@ -47,7 +51,7 @@ Supports animated or static icons with day/night variants, and shows hourly and 
 
    ![Meteocat Card add resource](images/resources_add.png)
 
-4. Refresh or hard refresh your web browser.
+6. Refresh or hard refresh your web browser.
 
    #### To perform a refresh
    ##### - On Windows and Linux
