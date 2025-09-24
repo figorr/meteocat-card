@@ -88,9 +88,29 @@ s-rainy-night.svg
 
 ## Configuration
 
+### Pick the card
+
+   ![Meteocat Card custom cards](images/custom_card_menu.png)
+
 ### Using your Meteocat Weather Entity
 
-Use your Meteocat Weather entity to get full functionality including current conditions, hourly and daily forecasts:
+   Use your Meteocat Weather entity to get full functionality including current conditions, hourly and daily forecasts.
+
+   You can use **visual editor** and **code editor** to configure your card.
+
+   #### (a) Visual editor setup
+
+   - ![Meteocat Card visual editor 01](images/visual_editor_01.png)
+
+   - ![Meteocat Card visual editor 02](images/visual_editor_02.png)
+
+   - ![Meteocat Card visual editor 03](images/visual_editor_03.png)
+
+      And **save**
+
+      Sometimes the alerts are not inmediately being shown so you need to perform a refresh at your lovelace or web browser, as explained above.
+
+   #### (b) Code editor setup
 
    ```yaml
    type: custom:meteocat-card
@@ -103,9 +123,15 @@ Use your Meteocat Weather entity to get full functionality including current con
    - entity: Your Meteocat Weather entity (e.g., weather.meteocat_yourtown)
    - option_static_icons: true for static icons, false for animated icons
 
-The card automatically selects the correct icon based on the current condition and time of day.
+     The card automatically selects the correct icon based on the current condition and time of day.
 
-#### Example Lovelace Card
+      #### Example Lovelace Card
+
+- ![Meteocat Card code editor 01](images/code_editor_01.png)
+
+- ![Meteocat Card code editor 01](images/code_editor_02.png)
+
+- ![Meteocat Card code editor 01](images/code_editor_03.png)
 
    ```yaml
    type: custom:meteocat-card
@@ -208,6 +234,13 @@ option_static_icons: true
 ## Uninstalling Meteocat Card
 
 To remove the Meteocat Card follow the guidelines from Wiki [Uninstallation](https://github.com/figorr/meteocat-card/wiki/Uninstallation)
+
+## Troubleshooting
+
+FAQ and common issues are solved in the Wiki.
+
+Please take a look at [Troubleshooting](https://github.com/figorr/meteocat-card/wiki/Troubleshooting)
+
 
 ## Contributing to Meteocat Card
 
