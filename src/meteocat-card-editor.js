@@ -3,9 +3,9 @@ const translations = {
   en: {
     title_default: "Meteocat",
     card_name: "Meteocat Card",
-    card_description: "Custom card to display Meteocat weather data.",
+    card_description: "Custom card to display Meteocat integration weather data.",
     editor_not_available: "Visual editor not available. Please use the YAML editor.",
-    entity: "Weather entity",
+    entity: "Forecast",
     sunrise_entity: "Sunrise",
     sunset_entity: "Sunset",
     option_static_icons: "Static icons",
@@ -13,9 +13,9 @@ const translations = {
   es: {
     title_default: "Meteocat",
     card_name: "Tarjeta Meteocat",
-    card_description: "Tarjeta personalizada para mostrar datos de clima de Meteocat.",
+    card_description: "Tarjeta personalizada para mostrar datos del tiempo de la integración Meteocat.",
     editor_not_available: "Editor visual no disponible. Por favor, usa el editor YAML.",
-    entity: "Weather entidad",
+    entity: "Previsión",
     sunrise_entity: "Amanecer",
     sunset_entity: "Atardecer",
     option_static_icons: "Iconos estáticos",
@@ -23,9 +23,9 @@ const translations = {
   ca: {
     title_default: "Meteocat",
     card_name: "Targeta Meteocat",
-    card_description: "Targeta personalitzada per mostrar dades de clima de Meteocat.",
+    card_description: "Targeta personalitzada per mostrar dades del temps de la integració Meteocat.",
     editor_not_available: "Editor visual no disponible. Si us plau, usa l'editor YAML.",
-    entity: "Weather entitat",
+    entity: "Previsió",
     sunrise_entity: "Sortida del sol",
     sunset_entity: "Posta de sol",
     option_static_icons: "Icones estàtiques",
@@ -91,13 +91,22 @@ class MeteocatCardEditor extends HTMLElement {
   }
 
   _schema() {
-    return [
-      { name: "entity", selector: { entity: { domain: "weather" } } },
-      { name: "sunrise_entity", selector: { entity: { domain: "sensor" } } },
-      { name: "sunset_entity", selector: { entity: { domain: "sensor" } } },
-      { name: "option_static_icons", selector: { boolean: {} } },
-    ];
-  }
+  return [
+    {
+      name: "entity",
+      selector: {
+        entity: {
+          filter: [
+            { domain: "weather", integration: "meteocat" },
+          ],
+        },
+      },
+    },
+    { name: "sunrise_entity", selector: { entity: { domain: "sensor" } } },
+    { name: "sunset_entity", selector: { entity: { domain: "sensor" } } },
+    { name: "option_static_icons", selector: { boolean: {} } },
+  ];
+}
 
   _render() {
     if (!this.shadowRoot) {
