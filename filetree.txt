@@ -1,6 +1,18 @@
 └── .github/
-    ├── publish-zip.yml
-    ├── release.yml
+    └── ISSUE_TEMPLATE/
+        ├── bug_report.md
+        ├── config.yml
+        ├── improvement.md
+        ├── new_function.md
+    ├── labels.yml
+    └── workflows/
+        ├── autocloser.yaml
+        ├── close-on-label.yml
+        ├── force-sync-labels.yml
+        ├── release.yml
+        ├── stale.yml
+        ├── sync-labels.yml
+        ├── validate.yaml
 ├── .gitignore
 ├── .releaserc
 ├── AUTHORS.md
@@ -122,13 +134,33 @@
     ├── s-tropical-storm.svg
     ├── s-unknown.svg
     ├── s-wind.svg
-├── manifest.json
+└── images/
+    ├── alerts.png
+    ├── banner.png
+    ├── code_editor_01.png
+    ├── code_editor_02.png
+    ├── code_editor_03.png
+    ├── current_example_1_alert.png
+    ├── current_example_2_alerts.png
+    ├── current_example_no_alerts.png
+    ├── custom_card_menu.png
+    ├── daily_forecast_2_alerts.png
+    ├── houryly_forecast_2_alerts.png
+    ├── remove_hacs.png
+    ├── resources_add.png
+    ├── resources_menu.png
+    ├── resources_remove.png
+    ├── sun_integration_01.png
+    ├── sun_integration_02.png
+    ├── visual_editor_01.png
+    ├── visual_editor_02.png
+    ├── visual_editor_03.png
+├── info.md
 ├── package-lock.json
 ├── package.json
 ├── rollup.config.js
 └── scripts/
     ├── update_version.sh
 └── src/
-    ├── loader.js
     ├── meteocat-card-editor.js
     ├── meteocat-card.js
