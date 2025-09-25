@@ -112,15 +112,19 @@ s-rainy-night.svg
 
    #### (a) Visual editor setup
 
-   - ![Meteocat Card visual editor 01](images/visual_editor_01.png)
+   - The visual setup is an easy way to configure your card.
 
-   - ![Meteocat Card visual editor 02](images/visual_editor_02.png)
+      #### Visual editor example
 
-   - ![Meteocat Card visual editor 03](images/visual_editor_03.png)
+      ![Meteocat Card visual editor 01](images/visual_editor_01.png)
 
-      And **save**
+      ![Meteocat Card visual editor 02](images/visual_editor_02.png)
 
-      Sometimes the alerts are not inmediately being shown so you need to perform a refresh at your lovelace or web browser, as explained above.
+      ![Meteocat Card visual editor 03](images/visual_editor_03.png)
+
+   - And **save**
+
+   - Sometimes the alerts are not inmediately being shown so you need to perform a refresh at your lovelace or web browser, as explained above.
 
    #### (b) Code editor setup
 
@@ -137,21 +141,21 @@ s-rainy-night.svg
 
      The card automatically selects the correct icon based on the current condition and time of day.
 
-      #### Example Lovelace Card
+      #### Code editor example
 
-- ![Meteocat Card code editor 01](images/code_editor_01.png)
+      ![Meteocat Card code editor 01](images/code_editor_01.png)
 
-- ![Meteocat Card code editor 01](images/code_editor_02.png)
+      ![Meteocat Card code editor 01](images/code_editor_02.png)
 
-- ![Meteocat Card code editor 01](images/code_editor_03.png)
+      ![Meteocat Card code editor 01](images/code_editor_03.png)
 
-   ```yaml
-   type: custom:meteocat-card
-   entity: weather.meteocat_station_id_weather_town_name
-   sunrise_entity: sensor.sun_next_rising
-   sunset_entity: sensor.sun_next_setting
-   option_static_icons: false
-   ```
+      ```yaml
+      type: custom:meteocat-card
+      entity: weather.meteocat_station_id_weather_town_name
+      sunrise_entity: sensor.sun_next_rising
+      sunset_entity: sensor.sun_next_setting
+      option_static_icons: false
+      ```
 
    **The card shows:**
 
