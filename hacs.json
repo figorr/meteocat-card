@@ -4,5 +4,6 @@
   "hide_default_branch": true,
   "render_readme": true,
   "zip_release": true,
-  "filename": "meteocat-card.zip"
+  "filename": "meteocat-card.zip",
+  "country": ["ES"]
 }
