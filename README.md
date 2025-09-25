@@ -14,7 +14,7 @@ Supports animated or static icons with day/night variants, and shows hourly and 
 
 ## Installation
 
-### HACS (From the Store) - Not available yet
+### HACS (From the Store)
 
 1. Open **HACS**.  
 2. Search for **Meteocat Card** and install it.
