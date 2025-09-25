@@ -1,3 +1,14 @@
+## [1.0.1](https://github.com/figorr/meteocat-card/compare/v1.0.0...v1.0.1) (2025-09-25)
+
+
+### Bug Fixes
+
+* Country ES ([8d819cc](https://github.com/figorr/meteocat-card/commit/8d819cc497eb5acdeac16f1f38acd5aad3c55394))
+* fix labels and description translations ([8a35a42](https://github.com/figorr/meteocat-card/commit/8a35a42fb7dd59f02bf32adddfb05a5b2f6310b8))
+* fix labels translations ([331e53b](https://github.com/figorr/meteocat-card/commit/331e53b30ddd6e44b4df1f2df71cb701c1b8f6f5))
+* HACS instructions ([9a99536](https://github.com/figorr/meteocat-card/commit/9a995367f454ab52e1a5a9e24a91d2cb8584022c))
+* update README ([922c2ab](https://github.com/figorr/meteocat-card/commit/922c2ab580eb3c3d116f26a8e730d253941718da))
+
 # 1.0.0 (2025-09-23)
 
 

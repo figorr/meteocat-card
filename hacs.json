@@ -5,5 +5,7 @@
   "render_readme": true,
   "zip_release": true,
   "filename": "meteocat-card.zip",
-  "country": ["ES"]
+  "country": [
+    "ES"
+  ]
 }
