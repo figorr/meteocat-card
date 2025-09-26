@@ -1,3 +1,11 @@
+## [1.0.2](https://github.com/figorr/meteocat-card/compare/v1.0.1...v1.0.2) (2025-09-26)
+
+
+### Bug Fixes
+
+* delete filename at hacs.json ([5abff2a](https://github.com/figorr/meteocat-card/commit/5abff2a53c8d4712551c2fd70c0b8f9f6b79a722))
+* fix hacs.json filename ([9f6ae0d](https://github.com/figorr/meteocat-card/commit/9f6ae0d0d819b34bbb1e683960db9985219aaec3))
+
 ## [1.0.1](https://github.com/figorr/meteocat-card/compare/v1.0.0...v1.0.1) (2025-09-25)
 
 
