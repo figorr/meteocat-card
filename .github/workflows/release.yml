@@ -68,7 +68,7 @@ jobs:
           mkdir -p tmp/meteocat-card
           cp dist/meteocat-card.js tmp/meteocat-card/
           cp dist/meteocat-card-editor.js tmp/meteocat-card/
-          cp -r icons tmp/meteocat-card/
+          cp -r icons tmp/meteocat-card/icons/
 
       # 9️⃣ Crear ZIP final
       - name: Create ZIP
