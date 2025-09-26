@@ -147,6 +147,7 @@
     ├── daily_forecast_2_alerts.png
     ├── houryly_forecast_2_alerts.png
     ├── remove_hacs.png
+    ├── resources.png
     ├── resources_add.png
     ├── resources_menu.png
     ├── resources_remove.png
