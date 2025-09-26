@@ -34,56 +34,20 @@ jobs:
       - name: Build meteocat-card.js
         run: npm run build
 
-      # 5️⃣ Mover archivos a la estructura deseada
-      - name: Prepare repository structure
-        run: |
-          mkdir -p meteocat-card
-          cp dist/meteocat-card.js meteocat-card/ || { echo "Error: dist/meteocat-card.js not found"; exit 1; }
-          cp dist/meteocat-card-editor.js meteocat-card/ || { echo "Error: dist/meteocat-card-editor.js not found"; exit 1; }
-          if [ -d "icons" ]; then
-            cp -r icons meteocat-card/icons
-          else
-            echo "Error: icons/ directory not found"
-            exit 1
-          fi
-          echo "Listing meteocat-card contents:"
-          ls -R meteocat-card
-
-      # 6️⃣ Configurar Git author
+      # 5️⃣ Configurar Git author para semantic-release
       - name: Configure Git author
         run: |
-          git config --global user.name "semantic-release-bot"
-          git config --global user.email "jdcuartero@yahoo.es"
+          git config user.name "semantic-release-bot"
+          git config user.email "jdcuartero@yahoo.es"
 
-      # 7️⃣ Commit archivos al repositorio
-      - name: Commit files to repository
-        run: |
-          git add meteocat-card
-          if git diff-index --quiet HEAD; then
-            echo "No changes to commit"
-          else
-            git commit -m "Add built files and icons to meteocat-card/ directory [ci skip]"
-            git push
-          fi
-
-      # 8️⃣ Crear ZIP para instalación manual
-      - name: Create ZIP for manual installation
-        run: |
-          cd meteocat-card
-          zip -r ../meteocat-card.zip .
-          cd ..
-          echo "ZIP created at $PWD/meteocat-card.zip"
-          echo "Listing ZIP contents:"
-          unzip -l meteocat-card.zip
-
-      # 9️⃣ Ejecutar semantic-release
+      # 6️⃣ Ejecutar semantic-release
       - name: Run semantic-release
         id: semantic_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
-      # 10️⃣ Obtener el tag del release
+      # 7️⃣ Obtener el tag del release
       - name: Get release tag
         id: get_tag
         run: |
@@ -96,16 +60,31 @@ jobs:
             echo "release_tag=" >> $GITHUB_OUTPUT
           fi
 
-      # 11️⃣ Subir archivos y ZIP como assets al release
-      - name: Upload files to release
+      # 8️⃣ Crear estructura de carpetas HACS
+      - name: Prepare HACS folder structure
+        if: steps.get_tag.outputs.release_tag != ''
+        run: |
+          rm -rf tmp
+          mkdir -p tmp/meteocat-card
+          cp dist/meteocat-card.js tmp/meteocat-card/
+          cp dist/meteocat-card-editor.js tmp/meteocat-card/
+          cp -r icons tmp/meteocat-card/
+
+      # 9️⃣ Crear ZIP final
+      - name: Create ZIP
+        if: steps.get_tag.outputs.release_tag != ''
+        run: |
+          cd tmp
+          zip -r ../meteocat-card.zip meteocat-card
+          cd ..
+          echo "ZIP created at $PWD/meteocat-card.zip"
+
+      # 10️⃣ Subir ZIP como asset al release
+      - name: Upload ZIP to release
         if: steps.get_tag.outputs.release_tag != ''
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            meteocat-card/meteocat-card.js
-            meteocat-card/meteocat-card-editor.js
-            meteocat-card.zip
+          files: meteocat-card.zip
           tag_name: ${{ steps.get_tag.outputs.release_tag }}
-          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
