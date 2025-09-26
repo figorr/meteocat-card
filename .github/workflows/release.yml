@@ -38,8 +38,8 @@ jobs:
       - name: Prepare repository structure
         run: |
           mkdir -p meteocat-card
-          cp dist/meteocat-card.js meteocat-card/
-          cp dist/meteocat-card-editor.js meteocat-card/
+          cp dist/meteocat-card.js meteocat-card/ || { echo "Error: dist/meteocat-card.js not found"; exit 1; }
+          cp dist/meteocat-card-editor.js meteocat-card/ || { echo "Error: dist/meteocat-card-editor.js not found"; exit 1; }
           if [ -d "icons" ]; then
             cp -r icons meteocat-card/icons
           else
@@ -49,14 +49,24 @@ jobs:
           echo "Listing meteocat-card contents:"
           ls -R meteocat-card
 
-      # 6️⃣ Commit archivos al repositorio
+      # 6️⃣ Configurar Git author
+      - name: Configure Git author
+        run: |
+          git config --global user.name "semantic-release-bot"
+          git config --global user.email "jdcuartero@yahoo.es"
+
+      # 7️⃣ Commit archivos al repositorio
       - name: Commit files to repository
         run: |
           git add meteocat-card
-          git diff-index --quiet HEAD || git commit -m "Add built files and icons to meteocat-card/ directory [ci skip]"
-          git push
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit"
+          else
+            git commit -m "Add built files and icons to meteocat-card/ directory [ci skip]"
+            git push
+          fi
 
-      # 7️⃣ Crear ZIP para instalación manual
+      # 8️⃣ Crear ZIP para instalación manual
       - name: Create ZIP for manual installation
         run: |
           cd meteocat-card
@@ -65,12 +75,6 @@ jobs:
           echo "ZIP created at $PWD/meteocat-card.zip"
           echo "Listing ZIP contents:"
           unzip -l meteocat-card.zip
-
-      # 8️⃣ Configurar Git author para semantic-release
-      - name: Configure Git author
-        run: |
-          git config user.name "semantic-release-bot"
-          git config user.email "jdcuartero@yahoo.es"
 
       # 9️⃣ Ejecutar semantic-release
       - name: Run semantic-release
