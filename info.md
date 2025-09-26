@@ -8,3 +8,5 @@ Meteocat Card is a custom card for Home Assistant that provides meteorological d
 - Alerts
 
 For more information, check the [README](https://github.com/figorr/meteocat-card).
+
+And for more extended information and troubleshooting, check the [Wiki](https://github.com/figorr/meteocat-card/wiki).
