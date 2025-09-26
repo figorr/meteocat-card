@@ -51,6 +51,8 @@ Supports animated or static icons with day/night variants, and shows hourly and 
 
    ![Meteocat Card add resource](images/resources_add.png)
 
+   ![Meteocat Card resource](images/resources.png)
+
 6. Refresh or hard refresh your web browser.
 
    #### To perform a refresh
