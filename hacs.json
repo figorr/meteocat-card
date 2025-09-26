@@ -3,7 +3,6 @@
   "homeassistant": "2025.9.3",
   "hide_default_branch": true,
   "render_readme": true,
-  "filename": "meteocat-card.js",
   "country": [
     "ES"
   ]
