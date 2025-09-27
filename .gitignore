@@ -9,3 +9,6 @@ semantic_print.py
 # VERSIONS
 current_version.txt
 next_version.txt
+
+# Temporal commit messages
+commit-msg.txt
