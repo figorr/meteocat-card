@@ -146,6 +146,8 @@
     ├── custom_card_menu.png
     ├── daily_forecast_2_alerts.png
     ├── houryly_forecast_2_alerts.png
+    ├── icon_path_code_editor.png
+    ├── icon_path_visual_editor.png
     ├── remove_hacs.png
     ├── resources.png
     ├── resources_add.png
