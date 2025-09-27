@@ -6,9 +6,10 @@ const translations = {
     card_description: "Custom card to display Meteocat integration weather data.",
     editor_not_available: "Visual editor not available. Please use the YAML editor.",
     entity: "Forecast",
-    sunrise_entity: "Sunrise",
-    sunset_entity: "Sunset",
     option_static_icons: "Static icons",
+    icon_path_type: "Icons path",
+    icon_path_type_hacs: "HACS installation",
+    icon_path_type_manual: "Manual installation",
   },
   es: {
     title_default: "Meteocat",
@@ -16,9 +17,10 @@ const translations = {
     card_description: "Tarjeta personalizada para mostrar datos del tiempo de la integración Meteocat.",
     editor_not_available: "Editor visual no disponible. Por favor, usa el editor YAML.",
     entity: "Previsión",
-    sunrise_entity: "Amanecer",
-    sunset_entity: "Atardecer",
     option_static_icons: "Iconos estáticos",
+    icon_path_type: "Ruta de iconos",
+    icon_path_type_hacs: "Instalación HACS",
+    icon_path_type_manual: "Instalación manual",
   },
   ca: {
     title_default: "Meteocat",
@@ -26,9 +28,10 @@ const translations = {
     card_description: "Targeta personalitzada per mostrar dades del temps de la integració Meteocat.",
     editor_not_available: "Editor visual no disponible. Si us plau, usa l'editor YAML.",
     entity: "Previsió",
-    sunrise_entity: "Sortida del sol",
-    sunset_entity: "Posta de sol",
     option_static_icons: "Icones estàtiques",
+    icon_path_type: "Ruta d'icones",
+    icon_path_type_hacs: "Instal·lació HACS",
+    icon_path_type_manual: "Instal·lació manual",
   },
 };
 
@@ -56,14 +59,17 @@ class MeteocatCardEditor extends HTMLElement {
     this._config = {
       type: "meteocat-card",
       entity: "weather.home",
-      sunrise_entity: "sensor.sun_next_rising",
-      sunset_entity: "sensor.sun_next_setting",
       option_static_icons: false,
+      icon_path_type: "hacs", // Cambiado a HACS por defecto
       ...config,
       title: undefined,
     };
+    // Establecer iconPath basado en icon_path_type
+    this._config.iconPath = this._config.icon_path_type === "hacs" ? "/hacsfiles/meteocat-card/icons/" : "/local/meteocat-card/icons/";
     delete this._config.title;
     delete this._config.icons;
+    delete this._config.sunrise_entity;
+    delete this._config.sunset_entity;
     console.log(
       "MeteocatCardEditor: setConfig called with config =",
       this._config
@@ -91,22 +97,34 @@ class MeteocatCardEditor extends HTMLElement {
   }
 
   _schema() {
-  return [
-    {
-      name: "entity",
-      selector: {
-        entity: {
-          filter: [
-            { domain: "weather", integration: "meteocat" },
-          ],
+    return [
+      {
+        name: "entity",
+        selector: {
+          entity: {
+            filter: [
+              { domain: "weather", integration: "meteocat" },
+            ],
+          },
         },
       },
-    },
-    { name: "sunrise_entity", selector: { entity: { domain: "sensor" } } },
-    { name: "sunset_entity", selector: { entity: { domain: "sensor" } } },
-    { name: "option_static_icons", selector: { boolean: {} } },
-  ];
-}
+      {
+        name: "icon_path_type",
+        selector: {
+          select: {
+            options: [
+              { value: "hacs", label: getTranslation(this._hass, "icon_path_type_hacs") },
+              { value: "manual", label: getTranslation(this._hass, "icon_path_type_manual") },
+            ],
+          },
+        },
+      },
+      {
+        name: "option_static_icons",
+        selector: { boolean: {} },
+      },
+    ];
+  }
 
   _render() {
     if (!this.shadowRoot) {
@@ -123,6 +141,7 @@ class MeteocatCardEditor extends HTMLElement {
       input[type="text"]{ width:100%; padding:6px 8px; box-sizing:border-box; border-radius:4px; border:1px solid rgba(0,0,0,0.12); background:var(--card-background-color); color:var(--primary-text-color); }
       .checkbox { display:flex; align-items:center; gap:8px; margin-top:8px; }
       .error { color: var(--error-color); padding: 16px; }
+      ha-alert { margin-bottom: 16px; }
     `;
     wrapper.appendChild(style);
 
@@ -141,20 +160,35 @@ class MeteocatCardEditor extends HTMLElement {
       form.hass = this._hass;
       form.data = {
         entity: this._config.entity,
-        sunrise_entity: this._config.sunrise_entity,
-        sunset_entity: this._config.sunset_entity,
         option_static_icons: this._config.option_static_icons,
+        icon_path_type: this._config.icon_path_type || "hacs",
       };
-      form.schema = this._schema(this._hass);
+      form.schema = this._schema();
 
-      // 👇 Asigna traducciones a los labels
+      // Asigna traducciones a los labels
       form.computeLabel = (schema) => {
         return getTranslation(this._hass, schema.name);
       };
 
-      form.addEventListener("value-changed", (ev) =>
-        this._onFormValueChanged(ev)
-      );
+      form.addEventListener("value-changed", (ev) => {
+        const newConfig = { ...this._config, ...ev.detail.value };
+        // Establecer iconPath basado en icon_path_type
+        newConfig.iconPath = newConfig.icon_path_type === "hacs" ? "/hacsfiles/meteocat-card/icons/" : "/local/meteocat-card/icons/";
+        delete newConfig.title;
+        delete newConfig.icons;
+        delete newConfig.sunrise_entity;
+        delete newConfig.sunset_entity;
+        console.log("MeteocatCardEditor: Config changed =", newConfig);
+        this.dispatchEvent(
+          new CustomEvent("config-changed", {
+            detail: { config: newConfig },
+            bubbles: true,
+            composed: true,
+          })
+        );
+        this._config = newConfig;
+      });
+
       wrapper.appendChild(form);
       this._form = form;
       console.log("MeteocatCardEditor: ha-form created successfully");
@@ -167,36 +201,6 @@ class MeteocatCardEditor extends HTMLElement {
     }
 
     this.shadowRoot.appendChild(wrapper);
-  }
-
-  _onFormValueChanged(ev) {
-    ev.stopPropagation();
-    const v = ev.detail && ev.detail.value ? ev.detail.value : null;
-    if (!v) return;
-    this._config = { ...this._config, ...v };
-    delete this._config.title;
-    delete this._config.icons;
-    this._dispatchConfigChanged();
-  }
-
-  _dispatchConfigChanged() {
-    const config = { ...this._config };
-    delete config.title;
-    delete config.icons;
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        detail: { config },
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
-
-  get value() {
-    const config = { ...this._config };
-    delete config.title;
-    delete config.icons;
-    return config;
   }
 }
 

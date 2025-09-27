@@ -424,7 +424,7 @@ class MeteocatCard extends HTMLElement {
   _config;
   _hass;
   _content;
-  iconPath = "/local/meteocat-card/icons/";
+  iconPath = "/hacsfiles/meteocat-card/icons/"; // Cambiado a HACS por defecto
   useStaticIcons = false;
   _currentForecast = "daily";
   _dailyForecasts = [];
@@ -440,6 +440,7 @@ class MeteocatCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._content = document.createElement("div");
     this.shadowRoot.appendChild(this._content);
+    this.iconPath = "/hacsfiles/meteocat-card/icons/"; // Cambiado a HACS por defecto
   }
 
   static getConfigElement() {
@@ -455,8 +456,6 @@ class MeteocatCard extends HTMLElement {
     }
     return {
       entity: "weather.home",
-      sunrise_entity: "sensor.sun_next_rising",
-      sunset_entity: "sensor.sun_next_setting",
       option_static_icons: false,
     };
   }
@@ -466,14 +465,20 @@ class MeteocatCard extends HTMLElement {
 
     this._config = {
       type: "meteocat-card",
-      sunrise_entity: "sensor.home_sunrise",
-      sunset_entity: "sensor.home_sunset",
       option_static_icons: false,
+      iconPath: "/hacsfiles/meteocat-card/icons/", // Cambiado a HACS por defecto
       ...config,
-      title: undefined
+      title: undefined,
+      sunrise_entity: undefined,
+      sunset_entity: undefined,
     };
     delete this._config.title;
     delete this._config.icons;
+    delete this._config.sunrise_entity;
+    delete this._config.sunset_entity;
+
+    this.iconPath = this._config.iconPath || "/hacsfiles/meteocat-card/icons/"; // Usar el configurado
+    console.log("MeteocatCard: iconPath set to", this.iconPath);
 
     this._entitiesDiscovered = false;
     this.useStaticIcons = !!this._config.option_static_icons;
@@ -497,7 +502,9 @@ class MeteocatCard extends HTMLElement {
       const deviceId = entry?.device_id;
 
       if (!deviceId) {
-        console.debug("MeteocatCard: No device_id found for", this._config.entity, "- skipping autodiscovery.");
+        console.debug("MeteocatCard: No device_id found for", this._config.entity, "- using default sunrise/sunset entities.");
+        this._config.sunrise_entity = "sensor.sun_next_rising";
+        this._config.sunset_entity = "sensor.sun_next_setting";
         this._entitiesDiscovered = true;
         return;
       }
@@ -514,6 +521,8 @@ class MeteocatCard extends HTMLElement {
       this._config.precipitation_probability_entity = findByKey("precipitation_probability") || this._config.precipitation_probability_entity;
       this._config.town_name_entity = findByKey("town_name") || this._config.town_name_entity;
       this._config.alerts_entity = findByKey("alerts") || this._config.alerts_entity;
+      this._config.sunrise_entity = findByKey("sunrise") || "sensor.sun_next_rising";
+      this._config.sunset_entity = findByKey("sunset") || "sensor.sun_next_setting";
 
       const alertKeys = [
         "alert_wind",
@@ -539,13 +548,18 @@ class MeteocatCard extends HTMLElement {
         precipitation_probability: this._config.precipitation_probability_entity,
         town_name: this._config.town_name_entity,
         alerts: this._config.alerts_entity,
+        sunrise: this._config.sunrise_entity,
+        sunset: this._config.sunset_entity,
         ...alertKeys.reduce((acc, key) => ({ ...acc, [key]: this._config[`${key}_entity`] }), {})
       });
 
       this._update();
     } catch (err) {
       console.error("MeteocatCard: Error discovering entities by translation_key:", err);
+      this._config.sunrise_entity = "sensor.sun_next_rising";
+      this._config.sunset_entity = "sensor.sun_next_setting";
       this._entitiesDiscovered = true;
+      this._update();
     }
   }
 
@@ -561,19 +575,36 @@ class MeteocatCard extends HTMLElement {
 
   _formatTimestamp(timestamp) {
     if (!timestamp || !isFinite(new Date(timestamp).getTime())) {
+      console.log("MeteocatCard: Invalid timestamp", timestamp);
       return "-";
     }
 
+    // Crear objeto Date para el timestamp
     const date = new Date(timestamp);
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    const dateStr = date.toISOString().split("T")[0];
-    const todayStr = today.toISOString().split("T")[0];
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    // Normalizar fechas para comparar en la zona horaria local (CEST)
+    const getLocalDateString = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
 
-    const timeStr = date.toLocaleTimeString(this._hass?.language || "es-ES", { hour: "2-digit", minute: "2-digit" });
+    const dateStr = getLocalDateString(date); // Fecha del timestamp en zona local
+    const todayStr = getLocalDateString(today); // Fecha actual en zona local
+    const tomorrowStr = getLocalDateString(tomorrow); // Fecha de mañana en zona local
+
+    // Formatear la hora en la zona horaria de Home Assistant
+    const timeStr = date.toLocaleTimeString(this._hass?.language || "es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: this._hass?.time_zone || "Europe/Madrid",
+    });
+
+    // Obtener abreviaturas de los días
     const days = [
       getTranslation(this._hass, 'sun'),
       getTranslation(this._hass, 'mon'),
@@ -581,16 +612,33 @@ class MeteocatCard extends HTMLElement {
       getTranslation(this._hass, 'wed'),
       getTranslation(this._hass, 'thu'),
       getTranslation(this._hass, 'fri'),
-      getTranslation(this._hass, 'sat')
+      getTranslation(this._hass, 'sat'),
     ];
     const dayAbbr = days[date.getDay()];
 
+    // Depuración
+    console.log("MeteocatCard: _formatTimestamp", {
+      timestamp,
+      dateStr,
+      todayStr,
+      tomorrowStr,
+      timeZone: this._hass?.time_zone || "Europe/Madrid",
+    });
+
+    // Lógica de formato
     if (dateStr === todayStr) {
-      return timeStr;
+      return timeStr; // Solo la hora para el día actual (e.g., "07:45")
     } else if (dateStr === tomorrowStr) {
-      return `${dayAbbr} ${timeStr}`;
+      return `${dayAbbr} ${timeStr}`; // Abreviatura + hora para el día siguiente (e.g., "Dom 07:45")
+    } else {
+      // Para otras fechas, incluir día y fecha completa
+      const dateFormatted = date.toLocaleDateString(this._hass?.language || "es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        timeZone: this._hass?.time_zone || "Europe/Madrid",
+      });
+      return `${dayAbbr} ${dateFormatted} ${timeStr}`; // e.g., "Lun 28/09 07:45"
     }
-    return timeStr;
   }
 
   _formatForecastDate(timestamp) {

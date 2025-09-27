@@ -72,6 +72,36 @@ Supports animated or static icons with day/night variants, and shows hourly and 
    - Command + Option + E then Reload
      : For a hard refresh in Safari, first press Command + Option + E to empty the cache, then click the Reload button in the toolbar.  
 
+## Icon Path Setup
+
+The card needs to know the path to its custom icons. The path depends on how you installed the card, by default HACS installation.
+
+So if you are using the visual editor you can pick **manual** or **HACS intallation**, the card will set the proper icon path.
+
+In case you are using code editor, the **HACS installation icon path** is the option set by default.
+
+You can edit the icons path if you placed the icons in a different place. You have to edit **iconPath**: `iconPath: /hacsfiles/meteocat-card/icons/`
+
+### Manual installation:
+
+`/local/meteocat-card/icons/`
+
+or which is the same:
+
+`/config/www/meteocat-card/icons/`
+
+### HACS installation:
+
+`/hacsfiles/meteocat-card/icons/`
+
+#### Visual editor example
+
+![Meteocat Card sun integration 01](images/icon_path_visual_editor.png)
+
+#### Code editor example
+
+![Meteocat Card sun integration 01](images/icon_path_code_editor.png)
+
 ## Icon Setup
 
 - a- prefix → animated icons (e.g., a-clear-day.svg)
@@ -89,18 +119,6 @@ s-rainy-night.svg
 ```
 
 ## Configuration
-
-### Before setting up the Metocat Card for the first time
-
-   You need to have some **sun** sensors, timestamp sensors, that provide sunrise and sunset data.
-
-   The easy way is to install the **sun** integration provided by Home Assistant.
-
-   But you can use your own `device_class` **`timestamp`** sensors.
-
-   ![Meteocat Card sun integration 01](images/sun_integration_01.png)
-
-   ![Meteocat Card sun integration 02](images/sun_integration_02.png)
 
 ### Pick the card
 
