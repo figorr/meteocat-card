@@ -1,3 +1,26 @@
+# [2.0.0](https://github.com/figorr/meteocat-card/compare/v1.0.2...v2.0.0) (2025-09-27)
+
+
+* feat!: ✨ Add configurable icon paths and native Meteocat sunrise/sunset sensors ([b76ca47](https://github.com/figorr/meteocat-card/commit/b76ca47354d3b76c729ec0bdb58106c14e04ab51))
+
+
+### BREAKING CHANGES
+
+* - This version of the card **requires Meteocat integration v3.1.0 or later**.
+- Previous versions allowed using sunrise and sunset sensors from the Home Assistant 'Sun' integration. This is no longer supported. The card now exclusively uses Meteocat's own sunrise and sunset sensors.
+- Recommended upgrade procedure:
+  1. Go to Settings > Dashboards > Resources.
+  2. Remove the existing 'Meteocat Card' resource.
+  3. Refresh the page.
+  4. Install the new version of 'Meteocat Card'.
+- This ensures no incompatible configuration remnants remain between versions.
+
+Changes:
+- Set default icon path to '/hacsfiles/meteocat-card/icons/' for HACS installations.
+- Added 'icon_path_type' option in the editor to toggle between HACS and manual icon paths.
+- Updated entity discovery to prioritize Meteocat's sunrise and sunset sensors over Sun integration.
+- Improved robustness of entity discovery with fallback to default sensors if needed.
+
 ## [1.0.2](https://github.com/figorr/meteocat-card/compare/v1.0.1...v1.0.2) (2025-09-26)
 
 
