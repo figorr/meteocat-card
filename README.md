@@ -150,10 +150,10 @@ s-rainy-night.svg
 
    ```yaml
    type: custom:meteocat-card
-   entity: weather.meteocat_station_id_weather_town_name
-   sunrise_entity: sensor.sun_next_rising
-   sunset_entity: sensor.sun_next_setting
-   option_static_icons: false  # set true for static icons
+   entity: weather.home
+   option_static_icons: false
+   icon_path_type: hacs
+   iconPath: /hacsfiles/meteocat-card/icons/  # set true for static icons
    ```
 
    - entity: Your Meteocat Weather entity (e.g., weather.meteocat_yourtown)
@@ -172,9 +172,9 @@ s-rainy-night.svg
       ```yaml
       type: custom:meteocat-card
       entity: weather.meteocat_station_id_weather_town_name
-      sunrise_entity: sensor.sun_next_rising
-      sunset_entity: sensor.sun_next_setting
       option_static_icons: false
+      icon_path_type: manual
+      iconPath: /local/meteocat-card/icons/
       ```
 
    **The card shows:**
@@ -184,23 +184,20 @@ s-rainy-night.svg
    - Daily forecast
    - Hourly forecast
 
-   Note: For sunset and sunrise you must setup the **Sun integration** and choice your `sunrise_entity: sensor.sun_next_rising` and your `sunset_entity: sensor.sun_next_setting`
-
 ## Configuration Options
 
-| Option               | Type    | Default                  | Description                                            |
-|----------------------|--------|---------------------------|--------------------------------------------------------|
-| `entity`             | string | —                         | **Required.** Your Meteocat weather entity.            |
-| `sunrise_entity`     | string | `sensor.sun_next_rising`  | **Required.** From Sun integration.                    |
-| `sunset_entity`      | string | `sensor.sun_next_setting` | **Required.** From Sun integration.                    |
-| `option_static_icons`| boolean| `false`                   | Use static icons (`true`) or animated icons (`false`). |
-| `icons`              | string | `/local/icons/`           | Path to the folder containing the SVG icons.           |
+| Option               | Type    | Default                          | Description                                            |
+|----------------------|--------|-----------------------------------|--------------------------------------------------------|
+| `entity`             | string | —                                 | **Required.** Your Meteocat weather entity.            |
+| `option_static_icons`| boolean| `false`                           | Use static icons (`true`) or animated icons (`false`). |
+| `icon_path_type`     | string | `hacs`                            | Use `hacs` or `manual` according to your installation. |
+| `iconPath`           | string | `/hacsfiles/meteocat-card/icons/` | Path to the folder containing the SVG icons.           |
 
 ## Notes
 
 - Make sure your Meteocat integration provides a Weather entity (not just individual sensors) to get full card functionality.
 - The card dynamically determines day or night icons.
-- For best results, keep your /config/www/meteocat-card/icons/ folder updated with the latest icons from the repo.
+- For best results, keep your icons folder updated with the latest icons from the repo.
 
 ## Examples
 
@@ -209,9 +206,9 @@ s-rainy-night.svg
 ```yaml
 type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
-sunrise_entity: sensor.sun_next_rising
-sunset_entity: sensor.sun_next_setting
 option_static_icons: false
+icon_path_type: hacs
+iconPath: /hacsfiles/meteocat-card/icons/
 ```
 
 ### Using Animated Icons
@@ -219,9 +216,9 @@ option_static_icons: false
 ```yaml
 type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
-sunrise_entity: sensor.sun_next_rising
-sunset_entity: sensor.sun_next_setting
 option_static_icons: false
+icon_path_type: hacs
+iconPath: /hacsfiles/meteocat-card/icons/
 ```
 
 ### Using Static Icons
@@ -229,9 +226,9 @@ option_static_icons: false
 ```yaml
 type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
-sunrise_entity: sensor.sun_next_rising
-sunset_entity: sensor.sun_next_setting
 option_static_icons: true
+icon_path_type: hacs
+iconPath: /hacsfiles/meteocat-card/icons/
 ```
 
 ### Example Display
