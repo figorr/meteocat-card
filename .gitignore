@@ -1,6 +1,7 @@
 # Node / build
 node_modules
 .DS_Store
+dist
 
 # Local scripts
 semantic_print.py
