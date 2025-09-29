@@ -92,7 +92,7 @@ or which is the same:
 
 ### HACS installation:
 
-`/hacsfiles/meteocat-card/icons/`
+`/hacsfiles/meteocat-card/`
 
 #### Visual editor example
 
@@ -151,9 +151,10 @@ s-rainy-night.svg
    ```yaml
    type: custom:meteocat-card
    entity: weather.home
-   option_static_icons: false
+   option_static_icons: false  # set true for static icons
    icon_path_type: hacs
-   iconPath: /hacsfiles/meteocat-card/icons/  # set true for static icons
+   iconPath: /hacsfiles/meteocat-card/
+   debug: false
    ```
 
    - entity: Your Meteocat Weather entity (e.g., weather.meteocat_yourtown)
@@ -175,6 +176,7 @@ s-rainy-night.svg
       option_static_icons: false
       icon_path_type: manual
       iconPath: /local/meteocat-card/icons/
+      debug: false
       ```
 
    **The card shows:**
@@ -191,7 +193,8 @@ s-rainy-night.svg
 | `entity`             | string | —                                 | **Required.** Your Meteocat weather entity.            |
 | `option_static_icons`| boolean| `false`                           | Use static icons (`true`) or animated icons (`false`). |
 | `icon_path_type`     | string | `hacs`                            | Use `hacs` or `manual` according to your installation. |
-| `iconPath`           | string | `/hacsfiles/meteocat-card/icons/` | Path to the folder containing the SVG icons.           |
+| `iconPath`           | string | `/hacsfiles/meteocat-card/`       | Path to the folder containing the SVG icons.           |
+| `debug`              | boolean| `false`                           | Use `true` to enable debug.                            |
 
 ## Notes
 
@@ -208,7 +211,8 @@ type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
 option_static_icons: false
 icon_path_type: hacs
-iconPath: /hacsfiles/meteocat-card/icons/
+iconPath: /hacsfiles/meteocat-card/
+debug: false
 ```
 
 ### Using Animated Icons
@@ -218,7 +222,8 @@ type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
 option_static_icons: false
 icon_path_type: hacs
-iconPath: /hacsfiles/meteocat-card/icons/
+iconPath: /hacsfiles/meteocat-card/
+debug: false
 ```
 
 ### Using Static Icons
@@ -228,7 +233,8 @@ type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
 option_static_icons: true
 icon_path_type: hacs
-iconPath: /hacsfiles/meteocat-card/icons/
+iconPath: /hacsfiles/meteocat-card/
+debug: false
 ```
 
 ### Example Display
