@@ -10,6 +10,7 @@ const translations = {
     icon_path_type: "Icons path",
     icon_path_type_hacs: "HACS installation",
     icon_path_type_manual: "Manual installation",
+    debug: "Enable debug logging",
   },
   es: {
     title_default: "Meteocat",
@@ -21,6 +22,7 @@ const translations = {
     icon_path_type: "Ruta de iconos",
     icon_path_type_hacs: "Instalación HACS",
     icon_path_type_manual: "Instalación manual",
+    debug: "Habilitar registro de depuración",
   },
   ca: {
     title_default: "Meteocat",
@@ -32,6 +34,7 @@ const translations = {
     icon_path_type: "Ruta d'icones",
     icon_path_type_hacs: "Instal·lació HACS",
     icon_path_type_manual: "Instal·lació manual",
+    debug: "Habilitar registre de depuració",
   },
 };
 
@@ -57,23 +60,20 @@ class MeteocatCardEditor extends HTMLElement {
 
   setConfig(config) {
     this._config = {
-      type: "meteocat-card",
+      type: "custom:meteocat-card",
       entity: "weather.home",
       option_static_icons: false,
-      icon_path_type: "hacs", // Cambiado a HACS por defecto
+      icon_path_type: "hacs",
+      debug: false,
       ...config,
       title: undefined,
     };
-    // Establecer iconPath basado en icon_path_type
-    this._config.iconPath = this._config.icon_path_type === "hacs" ? "/hacsfiles/meteocat-card/icons/" : "/local/meteocat-card/icons/";
+    this._config.iconPath = this._config.icon_path_type === "hacs" ? "/hacsfiles/meteocat-card/" : "/local/meteocat-card/icons/";
     delete this._config.title;
     delete this._config.icons;
     delete this._config.sunrise_entity;
     delete this._config.sunset_entity;
-    console.log(
-      "MeteocatCardEditor: setConfig called with config =",
-      this._config
-    );
+    console.log("MeteocatCardEditor: setConfig called with config =", this._config);
     this._render();
   }
 
@@ -162,31 +162,39 @@ class MeteocatCardEditor extends HTMLElement {
         entity: this._config.entity,
         option_static_icons: this._config.option_static_icons,
         icon_path_type: this._config.icon_path_type || "hacs",
+        debug: this._config.debug,
       };
       form.schema = this._schema();
 
-      // Asigna traducciones a los labels
       form.computeLabel = (schema) => {
         return getTranslation(this._hass, schema.name);
       };
 
       form.addEventListener("value-changed", (ev) => {
-        const newConfig = { ...this._config, ...ev.detail.value };
-        // Establecer iconPath basado en icon_path_type
-        newConfig.iconPath = newConfig.icon_path_type === "hacs" ? "/hacsfiles/meteocat-card/icons/" : "/local/meteocat-card/icons/";
-        delete newConfig.title;
-        delete newConfig.icons;
-        delete newConfig.sunrise_entity;
-        delete newConfig.sunset_entity;
-        console.log("MeteocatCardEditor: Config changed =", newConfig);
+        // Crear un nuevo objeto de configuración con el orden deseado
+        const updatedConfig = {
+          type: "custom:meteocat-card",
+          entity: ev.detail.value.entity,
+          option_static_icons: ev.detail.value.option_static_icons,
+          icon_path_type: ev.detail.value.icon_path_type,
+          iconPath: ev.detail.value.icon_path_type === "hacs" ? "/hacsfiles/meteocat-card/" : "/local/meteocat-card/icons/",
+          debug: ev.detail.value.debug,
+        };
+        // Mantener cualquier otra propiedad existente que no esté en el formulario
+        Object.keys(this._config).forEach((key) => {
+          if (!["type", "entity", "option_static_icons", "icon_path_type", "iconPath", "debug"].includes(key)) {
+            updatedConfig[key] = this._config[key];
+          }
+        });
+        console.log("MeteocatCardEditor: Config changed =", updatedConfig);
         this.dispatchEvent(
           new CustomEvent("config-changed", {
-            detail: { config: newConfig },
+            detail: { config: updatedConfig },
             bubbles: true,
             composed: true,
           })
         );
-        this._config = newConfig;
+        this._config = updatedConfig;
       });
 
       wrapper.appendChild(form);
@@ -205,12 +213,8 @@ class MeteocatCardEditor extends HTMLElement {
 }
 
 if (!customElements.get("meteocat-card-editor")) {
-  console.log(
-    "MeteocatCardEditor: Registering custom element meteocat-card-editor"
-  );
+  console.log("MeteocatCardEditor: Registering custom element meteocat-card-editor");
   customElements.define("meteocat-card-editor", MeteocatCardEditor);
 } else {
-  console.log(
-    "MeteocatCardEditor: Custom element meteocat-card-editor already defined"
-  );
+  console.log("MeteocatCardEditor: Custom element meteocat-card-editor already defined");
 }

@@ -1,6 +1,6 @@
 import "./meteocat-card-editor.js";
 
-// Traducciones embebidas (sin cambios)
+// Traducciones embebidas
 const translations = {
   en: {
     title_default: "Meteocat",
@@ -421,26 +421,33 @@ function getCardinalDirections(hass) {
 }
 
 class MeteocatCard extends HTMLElement {
-  _config;
-  _hass;
-  _content;
-  iconPath = "/hacsfiles/meteocat-card/icons/"; // Cambiado a HACS por defecto
-  useStaticIcons = false;
-  _currentForecast = "daily";
-  _dailyForecasts = [];
-  _hourlyForecasts = [];
-  _entitiesDiscovered = false;
-  _currentSlide = 0;
-  _sliderValue = 0; // Valor del slider (0-100%)
-  _isDragging = false; // Bandera para el arrastre
-  _legacySliderTouchCapture; // Para soporte táctil en dispositivos pre-iOS13
-
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this._content = document.createElement("div");
     this.shadowRoot.appendChild(this._content);
-    this.iconPath = "/hacsfiles/meteocat-card/icons/"; // Cambiado a HACS por defecto
+    this.iconPath = "/hacsfiles/meteocat-card/";
+    this.useStaticIcons = false;
+    this._currentForecast = "daily";
+    this._dailyForecasts = [];
+    this._hourlyForecasts = [];
+    this._dailyForecastsCache = { data: [], timestamp: 0 };
+    this._hourlyForecastsCache = { data: [], timestamp: 0 };
+    this._cacheTTL = 15 * 60 * 1000; // 15 minutos
+    this._entitiesDiscovered = false;
+    this._currentSlide = 0;
+    this._sliderValue = 0;
+    this._isDragging = false;
+    this._legacySliderTouchCapture = null;
+    this._updateTimeout = null;
+    this._updateDebounceDelay = 200; // 0.2 segundos
+    this._debug = false; // Modo de depuración desactivado por defecto
+  }
+
+  _log(...args) {
+    if (this._debug) {
+      console.log("MeteocatCard:", ...args);
+    }
   }
 
   static getConfigElement() {
@@ -452,21 +459,24 @@ class MeteocatCard extends HTMLElement {
       const weatherEntities = Object.values(hass.states)
         .filter(s => s.entity_id.startsWith("weather."))
         .map(s => ({ entity_id: s.entity_id, friendly_name: s.attributes?.friendly_name }));
-      console.log("MeteocatCard getStubConfig: Available weather entities =", weatherEntities);
+      console.log("MeteocatCard: Available weather entities =", weatherEntities);
     }
     return {
       entity: "weather.home",
       option_static_icons: false,
+      icon_path_type: "hacs",
+      iconPath: "/hacsfiles/meteocat-card/",
+      debug: false,
     };
   }
 
   setConfig(config) {
     if (!config?.entity) throw new Error(getTranslation(this._hass, 'entity_not_found', { entity: config?.entity || 'unknown' }));
-
     this._config = {
       type: "meteocat-card",
       option_static_icons: false,
-      iconPath: "/hacsfiles/meteocat-card/icons/", // Cambiado a HACS por defecto
+      iconPath: "/hacsfiles/meteocat-card/",
+      debug: false,
       ...config,
       title: undefined,
       sunrise_entity: undefined,
@@ -476,10 +486,9 @@ class MeteocatCard extends HTMLElement {
     delete this._config.icons;
     delete this._config.sunrise_entity;
     delete this._config.sunset_entity;
-
-    this.iconPath = this._config.iconPath || "/hacsfiles/meteocat-card/icons/"; // Usar el configurado
-    console.log("MeteocatCard: iconPath set to", this.iconPath);
-
+    this.iconPath = this._config.iconPath || "/hacsfiles/meteocat-card/";
+    this._debug = !!this._config.debug;
+    this._log("iconPath set to", this.iconPath);
     this._entitiesDiscovered = false;
     this.useStaticIcons = !!this._config.option_static_icons;
     this._discoverEntities();
@@ -502,7 +511,7 @@ class MeteocatCard extends HTMLElement {
       const deviceId = entry?.device_id;
 
       if (!deviceId) {
-        console.debug("MeteocatCard: No device_id found for", this._config.entity, "- using default sunrise/sunset entities.");
+        this._log("No device_id found for", this._config.entity, "- using default sunrise/sunset entities.");
         this._config.sunrise_entity = "sensor.sun_next_rising";
         this._config.sunset_entity = "sensor.sun_next_setting";
         this._entitiesDiscovered = true;
@@ -540,7 +549,7 @@ class MeteocatCard extends HTMLElement {
       }
 
       this._entitiesDiscovered = true;
-      console.log("MeteocatCard: autodiscovered entities:", {
+      this._log("autodiscovered entities:", {
         feels_like: this._config.feels_like_entity,
         forecast_max: this._config.forecast_max_entity,
         forecast_min: this._config.forecast_min_entity,
@@ -575,17 +584,15 @@ class MeteocatCard extends HTMLElement {
 
   _formatTimestamp(timestamp) {
     if (!timestamp || !isFinite(new Date(timestamp).getTime())) {
-      console.log("MeteocatCard: Invalid timestamp", timestamp);
+      this._log("Invalid timestamp", timestamp);
       return "-";
     }
 
-    // Crear objeto Date para el timestamp
     const date = new Date(timestamp);
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    // Normalizar fechas para comparar en la zona horaria local (CEST)
     const getLocalDateString = (d) => {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -593,18 +600,16 @@ class MeteocatCard extends HTMLElement {
       return `${year}-${month}-${day}`;
     };
 
-    const dateStr = getLocalDateString(date); // Fecha del timestamp en zona local
-    const todayStr = getLocalDateString(today); // Fecha actual en zona local
-    const tomorrowStr = getLocalDateString(tomorrow); // Fecha de mañana en zona local
+    const dateStr = getLocalDateString(date);
+    const todayStr = getLocalDateString(today);
+    const tomorrowStr = getLocalDateString(tomorrow);
 
-    // Formatear la hora en la zona horaria de Home Assistant
     const timeStr = date.toLocaleTimeString(this._hass?.language || "es-ES", {
       hour: "2-digit",
       minute: "2-digit",
       timeZone: this._hass?.time_zone || "Europe/Madrid",
     });
 
-    // Obtener abreviaturas de los días
     const days = [
       getTranslation(this._hass, 'sun'),
       getTranslation(this._hass, 'mon'),
@@ -616,28 +621,25 @@ class MeteocatCard extends HTMLElement {
     ];
     const dayAbbr = days[date.getDay()];
 
-    // Depuración
-    console.log("MeteocatCard: _formatTimestamp", {
+    this._log("_formatTimestamp", {
       timestamp,
       dateStr,
       todayStr,
       tomorrowStr,
-      timeZone: this._hass?.time_zone || "Europe/Madrid",
+      timeZone: this._hass?.time_zone || "Europe/Madrid"
     });
 
-    // Lógica de formato
     if (dateStr === todayStr) {
-      return timeStr; // Solo la hora para el día actual (e.g., "07:45")
+      return timeStr;
     } else if (dateStr === tomorrowStr) {
-      return `${dayAbbr} ${timeStr}`; // Abreviatura + hora para el día siguiente (e.g., "Dom 07:45")
+      return `${dayAbbr} ${timeStr}`;
     } else {
-      // Para otras fechas, incluir día y fecha completa
       const dateFormatted = date.toLocaleDateString(this._hass?.language || "es-ES", {
         day: "2-digit",
         month: "2-digit",
         timeZone: this._hass?.time_zone || "Europe/Madrid",
       });
-      return `${dayAbbr} ${dateFormatted} ${timeStr}`; // e.g., "Lun 28/09 07:45"
+      return `${dayAbbr} ${dateFormatted} ${timeStr}`;
     }
   }
 
@@ -706,6 +708,14 @@ class MeteocatCard extends HTMLElement {
 
   async _fetchForecasts(type) {
     if (!this._hass || !this._config?.entity) return [];
+    const cache = type === "daily" ? this._dailyForecastsCache : this._hourlyForecastsCache;
+    const now = Date.now();
+
+    if (cache.data.length > 0 && (now - cache.timestamp) < this._cacheTTL) {
+      this._log(`Using cached ${type} forecasts, count = ${cache.data.length}`);
+      return cache.data;
+    }
+
     try {
       const response = await this._hass.callWS({
         type: "call_service",
@@ -717,25 +727,30 @@ class MeteocatCard extends HTMLElement {
         },
         return_response: true
       });
-      console.log(`MeteocatCard: Raw response for ${type} forecasts =`, JSON.stringify(response, null, 2));
       const forecasts = response?.response?.[this._config.entity]?.forecast || [];
-      return forecasts.map(forecast => ({
+      const processedForecasts = forecasts.map(forecast => ({
         ...forecast,
         datetime: new Date(forecast.datetime),
         condition: forecast.condition ? forecast.condition.replace(/-/g, "_") : forecast.condition
       }));
+      cache.data = processedForecasts;
+      cache.timestamp = now;
+      this._log(`Fetched new ${type} forecasts, count = ${processedForecasts.length}`);
+      return processedForecasts;
     } catch (error) {
       console.error(`MeteocatCard: Error fetching ${type} forecasts:`, error);
       const entity = this._hass.states[this._config.entity];
       if (entity?.attributes?.forecast) {
-        console.log(`MeteocatCard: Falling back to entity attributes for ${type} forecasts`, entity.attributes.forecast);
-        return entity.attributes.forecast
+        this._log(`Falling back to entity attributes for ${type} forecasts, count = ${entity.attributes.forecast.length}`);
+        cache.data = entity.attributes.forecast
           .filter(f => new Date(f.datetime).toISOString().split('T')[0] === new Date().toISOString().split('T')[0] || type === "daily")
           .map(forecast => ({
             ...forecast,
             datetime: new Date(forecast.datetime),
             condition: forecast.condition ? forecast.condition.replace(/-/g, "_") : forecast.condition
           }));
+        cache.timestamp = now;
+        return cache.data;
       }
       return [];
     }
@@ -743,7 +758,7 @@ class MeteocatCard extends HTMLElement {
 
   _isDaytime(timestamp) {
     if (!this._hass || !this._config.sunrise_entity || !this._config.sunset_entity) {
-      console.warn("MeteocatCard: Sunrise or sunset data unavailable, falling back to default day/night logic");
+      this._log("Sunrise or sunset data unavailable, falling back to default day/night logic");
       const hour = new Date(timestamp).getHours();
       return hour >= 6 && hour < 18;
     }
@@ -752,7 +767,7 @@ class MeteocatCard extends HTMLElement {
     const sunset = this._hass.states[this._config.sunset_entity]?.state;
 
     if (!sunrise || !sunset) {
-      console.warn("MeteocatCard: Sunrise or sunset data unavailable, falling back to default day/night logic");
+      this._log("Sunrise or sunset data unavailable, falling back to default day/night logic");
       const hour = new Date(timestamp).getHours();
       return hour >= 6 && hour < 18;
     }
@@ -768,409 +783,407 @@ class MeteocatCard extends HTMLElement {
   }
 
   async _update() {
-    if (!this._hass || !this._config) return;
-
-    const entity = this._hass.states[this._config.entity];
-    const feelsLike = this._config.feels_like_entity ? this._hass.states[this._config.feels_like_entity] : null;
-    const forecastMax = this._config.forecast_max_entity ? this._hass.states[this._config.forecast_max_entity] : null;
-    const forecastMin = this._config.forecast_min_entity ? this._hass.states[this._config.forecast_min_entity] : null;
-    const precipitation = this._config.precipitation_entity ? this._hass.states[this._config.precipitation_entity] : null;
-    const precipitationProbability = this._config.precipitation_probability_entity ? this._hass.states[this._config.precipitation_probability_entity] : null;
-    const sunrise = this._hass.states[this._config.sunrise_entity];
-    const sunset = this._hass.states[this._config.sunset_entity];
-    const alertsEntity = this._config.alerts_entity ? this._hass.states[this._config.alerts_entity] : null;
-    const townName = this._config.town_name_entity ? this._hass.states[this._config.town_name_entity]?.state ?? "-" : "-";
-
-    if (!entity) {
-      this._content.innerHTML = `<ha-card>
-        <div style="padding:16px">${getTranslation(this._hass, 'entity_not_found', { entity: this._config.entity })}</div>
-      </ha-card>`;
-      return;
+    if (this._updateTimeout) {
+      clearTimeout(this._updateTimeout);
     }
+    this._updateTimeout = setTimeout(async () => {
+      if (!this._hass || !this._config) return;
 
-    const rawCondition = (entity.attributes?.condition || entity.state || "unknown").replace(/-/g, "_");
-    const condition = getTranslation(this._hass, rawCondition.toLowerCase(), {}, rawCondition);
-    const now = new Date();
-    const isDay = rawCondition !== "clear_night" && this._isDaytime(now);
+      const entity = this._hass.states[this._config.entity];
+      const feelsLike = this._config.feels_like_entity ? this._hass.states[this._config.feels_like_entity] : null;
+      const forecastMax = this._config.forecast_max_entity ? this._hass.states[this._config.forecast_max_entity] : null;
+      const forecastMin = this._config.forecast_min_entity ? this._hass.states[this._config.forecast_min_entity] : null;
+      const precipitation = this._config.precipitation_entity ? this._hass.states[this._config.precipitation_entity] : null;
+      const precipitationProbability = this._config.precipitation_probability_entity ? this._hass.states[this._config.precipitation_probability_entity] : null;
+      const sunrise = this._hass.states[this._config.sunrise_entity];
+      const sunset = this._hass.states[this._config.sunset_entity];
+      const alertsEntity = this._config.alerts_entity ? this._hass.states[this._config.alerts_entity] : null;
+      const townName = this._config.town_name_entity ? this._hass.states[this._config.town_name_entity]?.state ?? "-" : "-";
 
-    const iconFile = this._getIconFile(rawCondition, isDay);
-    const friendlyName = entity.attributes?.friendly_name || this._config.entity;
-    console.log("MeteocatCard: friendly_name =", friendlyName);
+      if (!entity) {
+        this._content.innerHTML = `<ha-card>
+          <div style="padding:16px">${getTranslation(this._hass, 'entity_not_found', { entity: this._config.entity })}</div>
+        </ha-card>`;
+        return;
+      }
 
-    const windBearing = entity.attributes?.wind_bearing;
-    const cardinalDirection = this._convertDegreesToCardinal(windBearing);
-    const windSpeed = entity.attributes?.wind_speed ?? "-";
-    const windGustSpeed = entity.attributes?.wind_gust_speed ?? "-";
-    const windSpeedUnit = entity.attributes?.wind_speed_unit ?? "km/h";
-    const windDisplay = windSpeed !== "-" && windGustSpeed !== "-"
-      ? getTranslation(this._hass, 'wind', { value: `${cardinalDirection} ${windSpeed} ${windSpeedUnit} (${getTranslation(this._hass, 'gust')} ${windGustSpeed} ${windSpeedUnit})` })
-      : windSpeed !== "-"
-        ? getTranslation(this._hass, 'wind', { value: `${cardinalDirection} ${windSpeed} ${windSpeedUnit}` })
-        : getTranslation(this._hass, 'wind', { value: `${cardinalDirection} -` });
+      const rawCondition = (entity.attributes?.condition || entity.state || "unknown").replace(/-/g, "_");
+      const condition = getTranslation(this._hass, rawCondition.toLowerCase(), {}, rawCondition);
+      const now = new Date();
+      const isDay = rawCondition !== "clear_night" && this._isDaytime(now);
 
-    this._dailyForecasts = await this._fetchForecasts("daily");
-    this._hourlyForecasts = await this._fetchForecasts("hourly");
-    console.log("MeteocatCard: Daily forecasts =", this._dailyForecasts);
-    console.log("MeteocatCard: Hourly forecasts =", this._hourlyForecasts);
+      const iconFile = this._getIconFile(rawCondition, isDay);
+      const friendlyName = entity.attributes?.friendly_name || this._config.entity;
+      this._log("friendly_name =", friendlyName);
 
-    let forecastHtml = `
-      <div class="forecast-toggle">
-        <button class="toggle-btn ${this._currentForecast === 'daily' ? 'active' : ''}" id="daily-btn">${getTranslation(this._hass, 'daily')}</button>
-        <button class="toggle-btn ${this._currentForecast === 'hourly' ? 'active' : ''}" id="hourly-btn">${getTranslation(this._hass, 'hourly')}</button>
-      </div>
-    `;
+      const windBearing = entity.attributes?.wind_bearing;
+      const cardinalDirection = this._convertDegreesToCardinal(windBearing);
+      const windSpeed = entity.attributes?.wind_speed ?? "-";
+      const windGustSpeed = entity.attributes?.wind_gust_speed ?? "-";
+      const windSpeedUnit = entity.attributes?.wind_speed_unit ?? "km/h";
+      const windDisplay = windSpeed !== "-" && windGustSpeed !== "-"
+        ? getTranslation(this._hass, 'wind', { value: `${cardinalDirection} ${windSpeed} ${windSpeedUnit} (${getTranslation(this._hass, 'gust')} ${windGustSpeed} ${windSpeedUnit})` })
+        : windSpeed !== "-"
+          ? getTranslation(this._hass, 'wind', { value: `${cardinalDirection} ${windSpeed} ${windSpeedUnit}` })
+          : getTranslation(this._hass, 'wind', { value: `${cardinalDirection} -` });
 
-    if (this._currentForecast === 'daily' && this._dailyForecasts.length > 0) {
-      forecastHtml += `
-        <div class="forecast-section">
-          <div class="forecast-title"><strong>${getTranslation(this._hass, 'daily_forecast')}</strong></div>
-          <div class="forecast-slider">
-            <div class="slider-container">
-              <div class="slider-track">
-                ${this._dailyForecasts.map((forecast, i) => {
-                  const forecastDate = new Date();
-                  forecastDate.setDate(forecastDate.getDate() + i);
-                  const condition = forecast.condition || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'condition') || 'unknown';
-                  const isDay = forecast.daytime !== false; // Usa daytime si está disponible
-                  const forecastIcon = this._getIconFile(condition, isDay);
-                  const maxTemp = forecast.temperature || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'temperature') || '-';
-                  const minTemp = forecast.templow || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'templow') || '-';
-                  const pop = forecast.precipitation_probability || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'precipitation_probability') || '-';
-                  const pos = forecast.precipitation || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'precipitation') || '0';
-                  const forecastDay = this._formatForecastDate(forecast.datetime);
-                  return `
-                    <div class="forecast-item">
-                      <div class="forecast-day">${forecastDay}</div>
-                      <img src="${forecastIcon}" alt="${condition}" class="forecast-icon">
-                      <div class="forecast-temp">${maxTemp}°C / ${minTemp}°C</div>
-                      <div class="forecast-precip"><ha-icon icon="mdi:weather-rainy"></ha-icon>${pop}%</div>
-                    </div>
-                  `;
-                }).join("")}
-              </div>
-            </div>
-            <div class="slider-bar">
-              <div class="slider-bg"></div>
-            </div>
-          </div>
+      this._dailyForecasts = await this._fetchForecasts("daily");
+      this._hourlyForecasts = await this._fetchForecasts("hourly");
+
+      let forecastHtml = `
+        <div class="forecast-toggle">
+          <button class="toggle-btn ${this._currentForecast === 'daily' ? 'active' : ''}" id="daily-btn">${getTranslation(this._hass, 'daily')}</button>
+          <button class="toggle-btn ${this._currentForecast === 'hourly' ? 'active' : ''}" id="hourly-btn">${getTranslation(this._hass, 'hourly')}</button>
         </div>
       `;
-    } else if (this._currentForecast === 'hourly' && this._hourlyForecasts.length > 0) {
-      forecastHtml += `
-        <div class="forecast-section">
-          <div class="forecast-title"><strong>${getTranslation(this._hass, 'hourly_forecast')}</strong></div>
-          <div class="forecast-slider">
-            <div class="slider-container">
-              <div class="slider-track">
-                ${this._hourlyForecasts.map((forecast, i) => {
-                  const forecastDate = new Date();
-                  forecastDate.setHours(forecastDate.getHours() + i + 1);
-                  const condition = forecast.condition || this._getForecastPropFromWeather(this._hourlyForecasts, forecastDate, 'condition') || 'unknown';
-                  const forecastIcon = this._getIconFile(condition, this._isDaytime(forecastDate));
-                  const temp = forecast.temperature || this._getForecastPropFromWeather(this._hourlyForecasts, forecastDate, 'temperature') || '-';
-                  const pos = forecast.precipitation || this._getForecastPropFromWeather(this._hourlyForecasts, forecastDate, 'precipitation') || '0';
-                  const windSpeed = forecast.wind_speed || this._getForecastPropFromWeather(this._hourlyForecasts, forecastDate, 'wind_speed') || '-';
-                  const humidity = forecast.humidity || this._getForecastPropFromWeather(this._hourlyForecasts, forecastDate, 'humidity') || '-';
-                  const forecastHour = this._formatForecastHour(forecast.datetime);
-                  return `
-                    <div class="forecast-item">
-                      <div class="forecast-hour">${forecastHour}</div>
-                      <img src="${forecastIcon}" alt="${condition}" class="forecast-icon">
-                      <div class="forecast-temp">${temp}°C</div>
-                      <div class="forecast-humidity"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: humidity })}</div>
-                      <div class="forecast-precip"><ha-icon icon="mdi:weather-rainy"></ha-icon>${pos} mm</div>
-                      <div class="forecast-wind"><ha-icon icon="mdi:weather-windy"></ha-icon>${windSpeed} km/h</div>
-                    </div>
-                  `;
-                }).join("")}
+
+      if (this._currentForecast === 'daily' && this._dailyForecasts.length > 0) {
+        forecastHtml += `
+          <div class="forecast-section">
+            <div class="forecast-title"><strong>${getTranslation(this._hass, 'daily_forecast')}</strong></div>
+            <div class="forecast-slider">
+              <div class="slider-container">
+                <div class="slider-track">
+                  ${this._dailyForecasts.map((forecast, i) => {
+                    const forecastDate = new Date();
+                    forecastDate.setDate(forecastDate.getDate() + i);
+                    const condition = forecast.condition || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'condition') || 'unknown';
+                    const isDay = forecast.daytime !== false;
+                    const forecastIcon = this._getIconFile(condition, isDay);
+                    const maxTemp = forecast.temperature || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'temperature') || '-';
+                    const minTemp = forecast.templow || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'templow') || '-';
+                    const pop = forecast.precipitation_probability || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'precipitation_probability') || '-';
+                    const pos = forecast.precipitation || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'precipitation') || '0';
+                    const forecastDay = this._formatForecastDate(forecast.datetime);
+                    return `
+                      <div class="forecast-item">
+                        <div class="forecast-day">${forecastDay}</div>
+                        <img src="${forecastIcon}" alt="${condition}" class="forecast-icon">
+                        <div class="forecast-temp">${maxTemp}°C / ${minTemp}°C</div>
+                        <div class="forecast-precip"><ha-icon icon="mdi:weather-rainy"></ha-icon>${pop}%</div>
+                      </div>
+                    `;
+                  }).join("")}
+                </div>
+              </div>
+              <div class="slider-bar">
+                <div class="slider-bg"></div>
               </div>
             </div>
-            <div class="slider-bar">
-              <div class="slider-bg"></div>
-            </div>
-          </div>
-        </div>
-      `;
-    } else {
-      const message = this._currentForecast === 'hourly' ? getTranslation(this._hass, 'no_hourly_forecast') : getTranslation(this._hass, 'no_forecast_data');
-      forecastHtml += `<div style="padding: 20px; color: var(--secondary-text-color);">${message}</div>`;
-    }
-
-    let alertsHtml = '';
-    if (alertsEntity) {
-      const alertCount = parseInt(alertsEntity.state ?? 0, 10);
-      alertsHtml = `
-        <div class="alerts-section">
-          <div class="alerts-title">${getTranslation(this._hass, 'alerts')}</div>
-          <div class="alerts-summary">
-      `;
-      if (alertCount === 0) {
-        alertsHtml += `<ha-icon icon="mdi:check-circle" style="color: green;"></ha-icon> ${getTranslation(this._hass, 'no_alerts')}`;
-      } else {
-        alertsHtml += `<ha-icon icon="mdi:alert-circle" style="color: red;"></ha-icon> ${getTranslation(this._hass, 'active_alerts', { count: alertCount })}`;
-      }
-      alertsHtml += `</div>`;
-
-      const alertKeys = [
-        "alert_wind",
-        "alert_rain_intensity",
-        "alert_rain",
-        "alert_sea",
-        "alert_cold",
-        "alert_warm",
-        "alert_warm_night",
-        "alert_snow"
-      ];
-      const alertMap = {
-        "alert_wind": getTranslation(this._hass, 'wind_alert'),
-        "alert_rain_intensity": getTranslation(this._hass, 'rain_intensity_alert'),
-        "alert_rain": getTranslation(this._hass, 'rain_alert'),
-        "alert_sea": getTranslation(this._hass, 'sea_alert'),
-        "alert_cold": getTranslation(this._hass, 'cold_alert'),
-        "alert_warm": getTranslation(this._hass, 'warm_alert'),
-        "alert_warm_night": getTranslation(this._hass, 'warm_night_alert'),
-        "alert_snow": getTranslation(this._hass, 'snow_alert')
-      };
-      let detailsHtml = '';
-      let hasActiveAlerts = false;
-      for (const key of alertKeys) {
-        const entityId = this._config[`${key}_entity`];
-        if (entityId) {
-          const specific = this._hass.states[entityId];
-          if (specific?.state === "opened") {
-            hasActiveAlerts = true;
-            let attrDetails = '';
-            const attrs = specific.attributes ?? {};
-            const attrKeys = ["inicio", "fin", "fecha", "periodo", "comentario", "umbral", "peligro", "nivel"];
-            attrKeys.forEach(attrKey => {
-              if (attrs[attrKey] !== undefined && attrs[attrKey] !== null) {
-                const displayValue = attrKey === "umbral"
-                  ? getThresholdTranslation(this._hass, key, attrs[attrKey], attrs[attrKey])
-                  : attrs[attrKey];
-                attrDetails += `<div class="alert-attr"><span class="alert-attr-name">${getTranslation(this._hass, attrKey)}:</span> <span class="alert-attr-value">${displayValue}</span></div>`;
-              }
-            });
-            detailsHtml += `
-              <div class="alert-detail-item">
-                <div class="alert-name">${alertMap[key]}</div>
-                ${attrDetails}
-              </div>
-            `;
-          }
-        }
-      }
-      if (alertCount > 0) {
-        alertsHtml += `
-          <div class="alerts-details-section">
-            <div class="alerts-details-title">${getTranslation(this._hass, 'alerts_details')}</div>
-            ${detailsHtml}
           </div>
         `;
+      } else if (this._currentForecast === 'hourly' && this._hourlyForecasts.length > 0) {
+        forecastHtml += `
+          <div class="forecast-section">
+            <div class="forecast-title"><strong>${getTranslation(this._hass, 'hourly_forecast')}</strong></div>
+            <div class="forecast-slider">
+              <div class="slider-container">
+                <div class="slider-track">
+                  ${this._hourlyForecasts.map((forecast, i) => {
+                    const forecastDate = new Date();
+                    forecastDate.setHours(forecastDate.getHours() + i + 1);
+                    const condition = forecast.condition || this._getForecastPropFromWeather(this._hourlyForecasts, forecastDate, 'condition') || 'unknown';
+                    const forecastIcon = this._getIconFile(condition, this._isDaytime(forecastDate));
+                    const temp = forecast.temperature || this._getForecastPropFromWeather(this._hourlyForecasts, forecastDate, 'temperature') || '-';
+                    const pos = forecast.precipitation || this._getForecastPropFromWeather(this._hourlyForecasts, forecastDate, 'precipitation') || '0';
+                    const windSpeed = forecast.wind_speed || this._getForecastPropFromWeather(this._hourlyForecasts, forecastDate, 'wind_speed') || '-';
+                    const humidity = forecast.humidity || this._getForecastPropFromWeather(this._hourlyForecasts, forecastDate, 'humidity') || '-';
+                    const forecastHour = this._formatForecastHour(forecast.datetime);
+                    return `
+                      <div class="forecast-item">
+                        <div class="forecast-hour">${forecastHour}</div>
+                        <img src="${forecastIcon}" alt="${condition}" class="forecast-icon">
+                        <div class="forecast-temp">${temp}°C</div>
+                        <div class="forecast-humidity"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: humidity })}</div>
+                        <div class="forecast-precip"><ha-icon icon="mdi:weather-rainy"></ha-icon>${pos} mm</div>
+                        <div class="forecast-wind"><ha-icon icon="mdi:weather-windy"></ha-icon>${windSpeed} km/h</div>
+                      </div>
+                    `;
+                  }).join("")}
+                </div>
+              </div>
+              <div class="slider-bar">
+                <div class="slider-bg"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        const message = this._currentForecast === 'hourly' ? getTranslation(this._hass, 'no_hourly_forecast') : getTranslation(this._hass, 'no_forecast_data');
+        forecastHtml += `<div style="padding: 20px; color: var(--secondary-text-color);">${message}</div>`;
       }
-      alertsHtml += `</div>`;
-    }
 
-    this._content.innerHTML = `
-      <ha-card>
-        <style>
-          .header { font-size: 1.8em; font-weight: normal; margin: 8px 20px 0; font-family: sans-serif; }
-          .town-name { font-size: 1.2em; color: var(--secondary-text-color); margin: 0 20px 8px; font-family: sans-serif; }
-          .current { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 2px; }
-          .current-left { display: flex; align-items: center; gap: 8px; }
-          .current-left img { width: 100px; height: 100px; }
-          .current-condition { font-size: 1.6em; font-weight: normal; font-family: sans-serif; }
-          .current-right { text-align: right; }
-          .current-temp { font-size: 2.5em; font-weight: normal; font-family: sans-serif; }
-          .current-feels { font-size: 0.9em; color: var(--secondary-text-color); margin-top: -10px; font-family: sans-serif; }
-          .details { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 2px 12px; padding: 6px 20px 10px; font-size: 1.0em; font-family: sans-serif; }
-          .detail { display: flex; align-items: center; gap: 4px; }
-          .detail ha-icon { color: var(--secondary-text-color); }
-          .forecast-toggle { display: flex; gap: 8px; padding: 8px 20px; }
-          .toggle-btn { padding: 4px 8px; border: 1px solid var(--divider-color); background: none; cursor: pointer; border-radius: 4px; font-family: sans-serif; }
-          .toggle-btn.active { background-color: var(--primary-color); color: white; }
-          .forecast-section { padding: 8px 20px; }
-          .forecast-title { font-size: 1.1em; font-weight: 500; margin-bottom: 4px; font-family: sans-serif; }
-          .forecast-slider { position: relative; }
-          .slider-container { overflow: hidden; width: calc(100px * 4 + 24px); }
-          .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); }
-          .forecast-item { display: flex; flex-direction: column; align-items: center; padding: 2px; min-width: 100px; margin-right: 8px; }
-          .forecast-icon { width: 48px; height: 48px; }
-          .forecast-day, .forecast-hour { font-weight: 500; font-family: sans-serif; }
-          .forecast-temp { font-size: 0.9em; font-family: sans-serif; }
-          .forecast-humidity { font-size: 0.9em; display: flex; align-items: center; gap: 2px; font-family: sans-serif; }
-          .forecast-precip, .forecast-wind { font-size: 0.9em; display: flex; align-items: center; gap: 2px; font-family: sans-serif; }
-          .forecast-precip ha-icon, .forecast-wind ha-icon, .forecast-humidity ha-icon { font-size: 0.8em; }
-          .slider-bar { position: relative; height: 8px; background: var(--slider-track-color, #e0e0e0); border-radius: 4px; margin: 8px 0; cursor: pointer; }
-          .slider-bg { position: absolute; top: 0; left: 0; height: 100%; width: var(--slider-value, 0%); background: var(--slider-color, var(--primary-color, #03a9f4)); border-radius: 4px; transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); }
-          .slider-bar.dragging .slider-bg { transition: none; }
-          .alerts-section { padding: 8px 20px; }
-          .alerts-title { font-size: 1.3em; font-weight: 500; margin-bottom: 4px; font-family: sans-serif; }
-          .alerts-summary { display: flex; align-items: center; gap: 4px; font-size: 1.0em; font-family: sans-serif; }
-          .alerts-details-section { margin-top: 8px; }
-          .alerts-details-title { font-size: 1.3em; font-weight: 500; margin-bottom: 4px; font-family: sans-serif; }
-          .alert-detail-item { margin-bottom: 12px; }
-          .alert-name { font-weight: bold; font-size: 1.0em; text-decoration: underline; font-family: sans-serif; }
-          .alert-attr { font-size: 0.9em; color: var(--secondary-text-color); font-family: sans-serif; }
-          .alert-attr-name { font-weight: bold; }
-          .alert-attr-value { }
-          .attribution { text-align: center; font-size: 0.8em; color: var(--secondary-text-color); padding: 8px 20px; font-family: sans-serif; }
-        </style>
-
-        <div class="header">Meteocat</div>
-        <div class="town-name">${townName}</div>
-
-        <div class="current">
-          <div class="current-left">
-            <img src="${iconFile}" alt="${condition}">
-            <div class="current-condition">${condition}</div>
-          </div>
-          <div class="current-right">
-            <div class="current-temp">${entity.attributes?.temperature ?? "-"}°C</div>
-            <div class="current-feels">${getTranslation(this._hass, 'feels_like', { value: feelsLike?.state ?? "-" })}</div>
-          </div>
-        </div>
-
-        <div class="details">
-          <div class="detail"><ha-icon icon="mdi:thermometer-high"></ha-icon>${getTranslation(this._hass, 'max_temp', { value: forecastMax?.state ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:thermometer-low"></ha-icon>${getTranslation(this._hass, 'min_temp', { value: forecastMin?.state ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: entity.attributes?.humidity ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-windy"></ha-icon>${windDisplay}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-rainy"></ha-icon>${getTranslation(this._hass, 'precipitation', { value: precipitation?.state ?? entity.attributes?.precipitation ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-pouring"></ha-icon>${getTranslation(this._hass, 'precipitation_probability', { value: precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:gauge"></ha-icon>${getTranslation(this._hass, 'pressure', { value: entity.attributes?.pressure ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: entity.attributes?.uv_index ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>
-        </div>
-
-        ${forecastHtml}
-
-        ${alertsHtml}
-
-        <div class="attribution">Powered by Meteocatpy</div>
-      </ha-card>
-    `;
-
-    const dailyBtn = this.shadowRoot.querySelector('#daily-btn');
-    const hourlyBtn = this.shadowRoot.querySelector('#hourly-btn');
-    const sliderTrack = this.shadowRoot.querySelector('.slider-track');
-    const sliderBar = this.shadowRoot.querySelector('.slider-bar');
-
-    if (dailyBtn) dailyBtn.addEventListener('click', () => this._toggleForecast('daily'));
-    if (hourlyBtn) hourlyBtn.addEventListener('click', () => this._toggleForecast('hourly'));
-
-    if (sliderTrack && sliderBar) {
-      const itemWidth = 108; // Width of each forecast item (100px + 8px margin-right)
-      const visibleItems = 4; // Number of items visible at once
-      const totalItems = this._currentForecast === 'daily' ? this._dailyForecasts.length : this._hourlyForecasts.length;
-      const maxSlides = Math.max(0, totalItems - visibleItems);
-      const maxTranslate = maxSlides * itemWidth;
-
-      const updateSliderPosition = (percentage, animate = true) => {
-        if (totalItems <= visibleItems) {
-          this._sliderValue = 0;
-          sliderTrack.style.transform = `translateX(0px)`;
-          sliderBar.style.setProperty('--slider-value', `0%`);
-          return;
+      let alertsHtml = '';
+      if (alertsEntity) {
+        const alertCount = parseInt(alertsEntity.state ?? 0, 10);
+        alertsHtml = `
+          <div class="alerts-section">
+            <div class="alerts-title">${getTranslation(this._hass, 'alerts')}</div>
+            <div class="alerts-summary">
+        `;
+        if (alertCount === 0) {
+          alertsHtml += `<ha-icon icon="mdi:check-circle" style="color: green;"></ha-icon> ${getTranslation(this._hass, 'no_alerts')}`;
+        } else {
+          alertsHtml += `<ha-icon icon="mdi:alert-circle" style="color: red;"></ha-icon> ${getTranslation(this._hass, 'active_alerts', { count: alertCount })}`;
         }
-        this._sliderValue = Math.max(0, Math.min(100, percentage));
-        const translateX = (this._sliderValue / 100) * maxTranslate;
-        this._currentSlide = Math.round(translateX / itemWidth);
-        sliderTrack.style.transition = animate ? 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none';
-        sliderTrack.style.transform = `translateX(-${translateX}px)`;
-        sliderBar.style.setProperty('--slider-value', `${this._sliderValue}%`);
-        if (animate) {
-          const onTransitionEnd = () => {
-            sliderTrack.removeEventListener('transitionend', onTransitionEnd);
-          };
-          sliderTrack.addEventListener('transitionend', onTransitionEnd);
+        alertsHtml += `</div>`;
+
+        const alertKeys = [
+          "alert_wind",
+          "alert_rain_intensity",
+          "alert_rain",
+          "alert_sea",
+          "alert_cold",
+          "alert_warm",
+          "alert_warm_night",
+          "alert_snow"
+        ];
+        const alertMap = {
+          "alert_wind": getTranslation(this._hass, 'wind_alert'),
+          "alert_rain_intensity": getTranslation(this._hass, 'rain_intensity_alert'),
+          "alert_rain": getTranslation(this._hass, 'rain_alert'),
+          "alert_sea": getTranslation(this._hass, 'sea_alert'),
+          "alert_cold": getTranslation(this._hass, 'cold_alert'),
+          "alert_warm": getTranslation(this._hass, 'warm_alert'),
+          "alert_warm_night": getTranslation(this._hass, 'warm_night_alert'),
+          "alert_snow": getTranslation(this._hass, 'snow_alert')
+        };
+        let detailsHtml = '';
+        let hasActiveAlerts = false;
+        for (const key of alertKeys) {
+          const entityId = this._config[`${key}_entity`];
+          if (entityId) {
+            const specific = this._hass.states[entityId];
+            if (specific?.state === "opened") {
+              hasActiveAlerts = true;
+              let attrDetails = '';
+              const attrs = specific.attributes ?? {};
+              const attrKeys = ["inicio", "fin", "fecha", "periodo", "comentario", "umbral", "peligro", "nivel"];
+              attrKeys.forEach(attrKey => {
+                if (attrs[attrKey] !== undefined && attrs[attrKey] !== null) {
+                  const displayValue = attrKey === "umbral"
+                    ? getThresholdTranslation(this._hass, key, attrs[attrKey], attrs[attrKey])
+                    : attrs[attrKey];
+                  attrDetails += `<div class="alert-attr"><span class="alert-attr-name">${getTranslation(this._hass, attrKey)}:</span> <span class="alert-attr-value">${displayValue}</span></div>`;
+                }
+              });
+              detailsHtml += `
+                <div class="alert-detail-item">
+                  <div class="alert-name">${alertMap[key]}</div>
+                  ${attrDetails}
+                </div>
+              `;
+            }
+          }
         }
-      };
+        if (alertCount > 0) {
+          alertsHtml += `
+            <div class="alerts-details-section">
+              <div class="alerts-details-title">${getTranslation(this._hass, 'alerts_details')}</div>
+              ${detailsHtml}
+            </div>
+          `;
+        }
+        alertsHtml += `</div>`;
+      }
 
-      // Eventos del slider
-      const onPointerDown = (event) => {
-        if (totalItems <= visibleItems) return;
-        event.preventDefault();
-        event.stopPropagation();
-        this._isDragging = true;
-        sliderBar.classList.add('dragging');
-        sliderBar.setPointerCapture(event.pointerId);
-      };
+      this._content.innerHTML = `
+        <ha-card>
+          <style>
+            .header { font-size: 1.8em; font-weight: normal; margin: 8px 20px 0; font-family: sans-serif; }
+            .town-name { font-size: 1.2em; color: var(--secondary-text-color); margin: 0 20px 8px; font-family: sans-serif; }
+            .current { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 2px; }
+            .current-left { display: flex; align-items: center; gap: 8px; }
+            .current-left img { width: 100px; height: 100px; }
+            .current-condition { font-size: 1.6em; font-weight: normal; font-family: sans-serif; }
+            .current-right { text-align: right; }
+            .current-temp { font-size: 2.5em; font-weight: normal; font-family: sans-serif; }
+            .current-feels { font-size: 0.9em; color: var(--secondary-text-color); margin-top: -10px; font-family: sans-serif; }
+            .details { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 2px 12px; padding: 6px 20px 10px; font-size: 1.0em; font-family: sans-serif; }
+            .detail { display: flex; align-items: center; gap: 4px; }
+            .detail ha-icon { color: var(--secondary-text-color); }
+            .forecast-toggle { display: flex; gap: 8px; padding: 8px 20px; }
+            .toggle-btn { padding: 4px 8px; border: 1px solid var(--divider-color); background: none; cursor: pointer; border-radius: 4px; font-family: sans-serif; }
+            .toggle-btn.active { background-color: var(--primary-color); color: white; }
+            .forecast-section { padding: 8px 20px; }
+            .forecast-title { font-size: 1.1em; font-weight: 500; margin-bottom: 4px; font-family: sans-serif; }
+            .forecast-slider { position: relative; }
+            .slider-container { overflow: hidden; width: calc(100px * 4 + 24px); }
+            .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); }
+            .forecast-item { display: flex; flex-direction: column; align-items: center; padding: 2px; min-width: 100px; margin-right: 8px; }
+            .forecast-icon { width: 48px; height: 48px; }
+            .forecast-day, .forecast-hour { font-weight: 500; font-family: sans-serif; }
+            .forecast-temp { font-size: 0.9em; font-family: sans-serif; }
+            .forecast-humidity { font-size: 0.9em; display: flex; align-items: center; gap: 2px; font-family: sans-serif; }
+            .forecast-precip, .forecast-wind { font-size: 0.9em; display: flex; align-items: center; gap: 2px; font-family: sans-serif; }
+            .forecast-precip ha-icon, .forecast-wind ha-icon, .forecast-humidity ha-icon { font-size: 0.8em; }
+            .slider-bar { position: relative; height: 8px; background: var(--slider-track-color, #e0e0e0); border-radius: 4px; margin: 8px 0; cursor: pointer; }
+            .slider-bg { position: absolute; top: 0; left: 0; height: 100%; width: var(--slider-value, 0%); background: var(--slider-color, var(--primary-color, #03a9f4)); border-radius: 4px; transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); }
+            .slider-bar.dragging .slider-bg { transition: none; }
+            .alerts-section { padding: 8px 20px; }
+            .alerts-title { font-size: 1.3em; font-weight: 500; margin-bottom: 4px; font-family: sans-serif; }
+            .alerts-summary { display: flex; align-items: center; gap: 4px; font-size: 1.0em; font-family: sans-serif; }
+            .alerts-details-section { margin-top: 8px; }
+            .alerts-details-title { font-size: 1.3em; font-weight: 500; margin-bottom: 4px; font-family: sans-serif; }
+            .alert-detail-item { margin-bottom: 12px; }
+            .alert-name { font-weight: bold; font-size: 1.0em; text-decoration: underline; font-family: sans-serif; }
+            .alert-attr { font-size: 0.9em; color: var(--secondary-text-color); font-family: sans-serif; }
+            .alert-attr-name { font-weight: bold; }
+            .alert-attr-value { }
+            .attribution { text-align: center; font-size: 0.8em; color: var(--secondary-text-color); padding: 8px 20px; font-family: sans-serif; }
+          </style>
 
-      const onPointerUp = (event) => {
-        if (!this._isDragging) return;
-        this._isDragging = false;
-        sliderBar.classList.remove('dragging');
-        sliderBar.releasePointerCapture(event.pointerId);
-        // Ajustar a la posición más cercana
-        const newSlide = Math.round((this._sliderValue / 100) * maxSlides);
-        const percentage = (newSlide / maxSlides) * 100;
-        updateSliderPosition(percentage);
-      };
+          <div class="header">Meteocat</div>
+          <div class="town-name">${townName}</div>
 
-      const onPointerMove = (event) => {
-        if (!this._isDragging || totalItems <= visibleItems) return;
-        const { left, width } = sliderBar.getBoundingClientRect();
-        const x = Math.max(0, Math.min(width, event.clientX - left));
-        const percentage = (x / width) * 100;
-        updateSliderPosition(percentage, false);
-      };
+          <div class="current">
+            <div class="current-left">
+              <img src="${iconFile}" alt="${condition}">
+              <div class="current-condition">${condition}</div>
+            </div>
+            <div class="current-right">
+              <div class="current-temp">${entity.attributes?.temperature ?? "-"}°C</div>
+              <div class="current-feels">${getTranslation(this._hass, 'feels_like', { value: feelsLike?.state ?? "-" })}</div>
+            </div>
+          </div>
 
-      // Manejo del evento click
-      const onClick = (event) => {
-        if (totalItems <= visibleItems) return;
-        event.preventDefault();
-        event.stopPropagation();
-        const { left, width } = sliderBar.getBoundingClientRect();
-        const x = Math.max(0, Math.min(width, event.clientX - left));
-        const percentage = (x / width) * 100;
-        const newSlide = Math.round((percentage / 100) * maxSlides);
-        const adjustedPercentage = (newSlide / maxSlides) * 100;
-        updateSliderPosition(adjustedPercentage);
-      };
+          <div class="details">
+            <div class="detail"><ha-icon icon="mdi:thermometer-high"></ha-icon>${getTranslation(this._hass, 'max_temp', { value: forecastMax?.state ?? "-" })}</div>
+            <div class="detail"><ha-icon icon="mdi:thermometer-low"></ha-icon>${getTranslation(this._hass, 'min_temp', { value: forecastMin?.state ?? "-" })}</div>
+            <div class="detail"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: entity.attributes?.humidity ?? "-" })}</div>
+            <div class="detail"><ha-icon icon="mdi:weather-windy"></ha-icon>${windDisplay}</div>
+            <div class="detail"><ha-icon icon="mdi:weather-rainy"></ha-icon>${getTranslation(this._hass, 'precipitation', { value: precipitation?.state ?? entity.attributes?.precipitation ?? "-" })}</div>
+            <div class="detail"><ha-icon icon="mdi:weather-pouring"></ha-icon>${getTranslation(this._hass, 'precipitation_probability', { value: precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-" })}</div>
+            <div class="detail"><ha-icon icon="mdi:gauge"></ha-icon>${getTranslation(this._hass, 'pressure', { value: entity.attributes?.pressure ?? "-" })}</div>
+            <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: entity.attributes?.uv_index ?? "-" })}</div>
+            <div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>
+            <div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>
+          </div>
 
-      // Soporte para dispositivos táctiles pre-iOS13
-      const onTouchStart = (event) => {
-        if ('PointerEvent' in window) return;
-        if (totalItems <= visibleItems) return;
-        event.preventDefault();
-        this._isDragging = true;
-        sliderBar.classList.add('dragging');
-        this._legacySliderTouchCapture = event.touches[0].identifier;
-      };
+          ${forecastHtml}
 
-      const onTouchEnd = () => {
-        if ('PointerEvent' in window) return;
-        if (!this._isDragging) return;
-        this._isDragging = false;
-        sliderBar.classList.remove('dragging');
-        this._legacySliderTouchCapture = undefined;
-        // Ajustar a la posición más cercana
-        const newSlide = Math.round((this._sliderValue / 100) * maxSlides);
-        const percentage = (newSlide / maxSlides) * 100;
-        updateSliderPosition(percentage);
-      };
+          ${alertsHtml}
 
-      const onTouchMove = (event) => {
-        if ('PointerEvent' in window) return;
-        if (!this._isDragging || this._legacySliderTouchCapture !== event.touches[0].identifier || totalItems <= visibleItems) return;
-        const { left, width } = sliderBar.getBoundingClientRect();
-        const x = Math.max(0, Math.min(width, event.touches[0].clientX - left));
-        const percentage = (x / width) * 100;
-        updateSliderPosition(percentage, false);
-      };
+          <div class="attribution">Powered by Meteocatpy</div>
+        </ha-card>
+      `;
 
-      sliderBar.addEventListener('pointerdown', onPointerDown);
-      sliderBar.addEventListener('pointerup', onPointerUp);
-      sliderBar.addEventListener('pointermove', onPointerMove);
-      sliderBar.addEventListener('click', onClick);
-      sliderBar.addEventListener('touchstart', onTouchStart);
-      sliderBar.addEventListener('touchend', onTouchEnd);
-      sliderBar.addEventListener('touchmove', onTouchMove);
+      const dailyBtn = this.shadowRoot.querySelector('#daily-btn');
+      const hourlyBtn = this.shadowRoot.querySelector('#hourly-btn');
+      const sliderTrack = this.shadowRoot.querySelector('.slider-track');
+      const sliderBar = this.shadowRoot.querySelector('.slider-bar');
 
-      // Inicializar posición
-      updateSliderPosition(this._sliderValue, false);
-    }
+      if (dailyBtn) dailyBtn.addEventListener('click', () => this._toggleForecast('daily'));
+      if (hourlyBtn) hourlyBtn.addEventListener('click', () => this._toggleForecast('hourly'));
+
+      if (sliderTrack && sliderBar) {
+        const itemWidth = 108;
+        const visibleItems = 4;
+        const totalItems = this._currentForecast === 'daily' ? this._dailyForecasts.length : this._hourlyForecasts.length;
+        const maxSlides = Math.max(0, totalItems - visibleItems);
+        const maxTranslate = maxSlides * itemWidth;
+
+        const updateSliderPosition = (percentage, animate = true) => {
+          if (totalItems <= visibleItems) {
+            this._sliderValue = 0;
+            sliderTrack.style.transform = `translateX(0px)`;
+            sliderBar.style.setProperty('--slider-value', `0%`);
+            return;
+          }
+          this._sliderValue = Math.max(0, Math.min(100, percentage));
+          const translateX = (this._sliderValue / 100) * maxTranslate;
+          this._currentSlide = Math.round(translateX / itemWidth);
+          sliderTrack.style.transition = animate ? 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none';
+          sliderTrack.style.transform = `translateX(-${translateX}px)`;
+          sliderBar.style.setProperty('--slider-value', `${this._sliderValue}%`);
+          if (animate) {
+            const onTransitionEnd = () => {
+              sliderTrack.removeEventListener('transitionend', onTransitionEnd);
+            };
+            sliderTrack.addEventListener('transitionend', onTransitionEnd);
+          }
+        };
+
+        const onPointerDown = (event) => {
+          if (totalItems <= visibleItems) return;
+          event.preventDefault();
+          event.stopPropagation();
+          this._isDragging = true;
+          sliderBar.classList.add('dragging');
+          sliderBar.setPointerCapture(event.pointerId);
+        };
+
+        const onPointerUp = (event) => {
+          if (!this._isDragging) return;
+          this._isDragging = false;
+          sliderBar.classList.remove('dragging');
+          sliderBar.releasePointerCapture(event.pointerId);
+          const newSlide = Math.round((this._sliderValue / 100) * maxSlides);
+          const percentage = (newSlide / maxSlides) * 100;
+          updateSliderPosition(percentage);
+        };
+
+        const onPointerMove = (event) => {
+          if (!this._isDragging || totalItems <= visibleItems) return;
+          const { left, width } = sliderBar.getBoundingClientRect();
+          const x = Math.max(0, Math.min(width, event.clientX - left));
+          const percentage = (x / width) * 100;
+          updateSliderPosition(percentage, false);
+        };
+
+        const onClick = (event) => {
+          if (totalItems <= visibleItems) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const { left, width } = sliderBar.getBoundingClientRect();
+          const x = Math.max(0, Math.min(width, event.clientX - left));
+          const percentage = (x / width) * 100;
+          const newSlide = Math.round((percentage / 100) * maxSlides);
+          const adjustedPercentage = (newSlide / maxSlides) * 100;
+          updateSliderPosition(adjustedPercentage);
+        };
+
+        const onTouchStart = (event) => {
+          if ('PointerEvent' in window) return;
+          if (totalItems <= visibleItems) return;
+          event.preventDefault();
+          this._isDragging = true;
+          sliderBar.classList.add('dragging');
+          this._legacySliderTouchCapture = event.touches[0].identifier;
+        };
+
+        const onTouchEnd = () => {
+          if ('PointerEvent' in window) return;
+          if (!this._isDragging) return;
+          this._isDragging = false;
+          sliderBar.classList.remove('dragging');
+          this._legacySliderTouchCapture = undefined;
+          const newSlide = Math.round((this._sliderValue / 100) * maxSlides);
+          const percentage = (newSlide / maxSlides) * 100;
+          updateSliderPosition(percentage);
+        };
+
+        const onTouchMove = (event) => {
+          if ('PointerEvent' in window) return;
+          if (!this._isDragging || this._legacySliderTouchCapture !== event.touches[0].identifier || totalItems <= visibleItems) return;
+          const { left, width } = sliderBar.getBoundingClientRect();
+          const x = Math.max(0, Math.min(width, event.touches[0].clientX - left));
+          const percentage = (x / width) * 100;
+          updateSliderPosition(percentage, false);
+        };
+
+        sliderBar.addEventListener('pointerdown', onPointerDown);
+        sliderBar.addEventListener('pointerup', onPointerUp);
+        sliderBar.addEventListener('pointermove', onPointerMove);
+        sliderBar.addEventListener('click', onClick);
+        sliderBar.addEventListener('touchstart', onTouchStart);
+        sliderBar.addEventListener('touchend', onTouchEnd);
+        sliderBar.addEventListener('touchmove', onTouchMove);
+
+        updateSliderPosition(this._sliderValue, false);
+      }
+      this._log("Update completed");
+    }, this._updateDebounceDelay);
   }
 
   _getIconFile(condition, isDay) {
@@ -1195,8 +1208,9 @@ class MeteocatCard extends HTMLElement {
     if (base !== "unknown" && base !== "clear-day") {
       base += isDay ? "-day" : "-night";
     }
-    console.log("MeteocatCard: _getIconFile called with condition =", condition, "isDay =", isDay, "resulting icon =", `${this.iconPath}${prefix}${base}.svg`);
-    return `${this.iconPath}${prefix}${base}.svg`;
+    const icon = `${this.iconPath}${prefix}${base}.svg`;
+    this._log("_getIconFile called with condition =", condition, "isDay =", isDay, "resulting icon =", icon);
+    return icon;
   }
 
   getCardSize() {
