@@ -758,8 +758,10 @@ class MeteocatCard extends HTMLElement {
     const cache = type === "daily" ? this._dailyForecastsCache : this._hourlyForecastsCache;
     const now = Date.now();
 
+    // Usar caché si todavía está vigente
     if (cache.data.length > 0 && (now - cache.timestamp) < this._cacheTTL) {
       this._log(`Using cached ${type} forecasts, count = ${cache.data.length}`);
+      this._log(`${type} forecasts array =\n${JSON.stringify(cache.data, null, 2)}`);
       return cache.data;
     }
 
@@ -774,21 +776,28 @@ class MeteocatCard extends HTMLElement {
         },
         return_response: true
       });
+
       const forecasts = response?.response?.[this._config.entity]?.forecast || [];
       const processedForecasts = forecasts.map(forecast => ({
         ...forecast,
         datetime: new Date(forecast.datetime),
         condition: forecast.condition ? forecast.condition.replace(/-/g, "_") : forecast.condition
       }));
+
       cache.data = processedForecasts;
       cache.timestamp = now;
+
+      // 🔎 LOG RESUMEN Y ARRAY COMPLETO
       this._log(`Fetched new ${type} forecasts, count = ${processedForecasts.length}`);
+      this._log(`${type} forecasts array =\n${JSON.stringify(processedForecasts, null, 2)}`);
+
       return processedForecasts;
+
     } catch (error) {
       console.error(`MeteocatCard: Error fetching ${type} forecasts:`, error);
       const entity = this._hass.states[this._config.entity];
+
       if (entity?.attributes?.forecast) {
-        this._log(`Falling back to entity attributes for ${type} forecasts, count = ${entity.attributes.forecast.length}`);
         cache.data = entity.attributes.forecast
           .filter(f => new Date(f.datetime).toISOString().split('T')[0] === new Date().toISOString().split('T')[0] || type === "daily")
           .map(forecast => ({
@@ -796,7 +805,13 @@ class MeteocatCard extends HTMLElement {
             datetime: new Date(forecast.datetime),
             condition: forecast.condition ? forecast.condition.replace(/-/g, "_") : forecast.condition
           }));
+
         cache.timestamp = now;
+
+        // 🔎 LOG FALLBACK
+        this._log(`Falling back to entity attributes for ${type} forecasts, count = ${cache.data.length}`);
+        this._log(`${type} forecasts array (fallback) =\n${JSON.stringify(cache.data, null, 2)}`);
+
         return cache.data;
       }
       return [];
