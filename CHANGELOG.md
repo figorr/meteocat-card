@@ -1,3 +1,10 @@
+## [2.0.2](https://github.com/figorr/meteocat-card/compare/v2.0.1...v2.0.2) (2025-10-01)
+
+
+### Bug Fixes
+
+* 🐞 Fix forecast items list inside slider when the card is resized due to a lower display resolution. ([ea54ca5](https://github.com/figorr/meteocat-card/commit/ea54ca53affb29e68b9bf02cb5bd4ffdff8955c2))
+
 ## [2.0.1](https://github.com/figorr/meteocat-card/compare/v2.0.0...v2.0.1) (2025-09-29)
 
 
