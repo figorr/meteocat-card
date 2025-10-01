@@ -442,6 +442,9 @@ class MeteocatCard extends HTMLElement {
     this._updateTimeout = null;
     this._updateDebounceDelay = 200; // 0.2 segundos
     this._debug = false; // Modo de depuración desactivado por defecto
+    this.visibleItems = 4;
+    this.resizeObserver = null;
+    this._fadeDuration = 0.3; // Duración por defecto del fade en segundos
   }
 
   _log(...args) {
@@ -467,6 +470,7 @@ class MeteocatCard extends HTMLElement {
       icon_path_type: "hacs",
       iconPath: "/hacsfiles/meteocat-card/",
       debug: false,
+      fade_duration: 0.3, // Duración por defecto del fade
     };
   }
 
@@ -477,6 +481,7 @@ class MeteocatCard extends HTMLElement {
       option_static_icons: false,
       iconPath: "/hacsfiles/meteocat-card/",
       debug: false,
+      fade_duration: 0.3, // Duración por defecto del fade
       ...config,
       title: undefined,
       sunrise_entity: undefined,
@@ -487,8 +492,9 @@ class MeteocatCard extends HTMLElement {
     delete this._config.sunrise_entity;
     delete this._config.sunset_entity;
     this.iconPath = this._config.iconPath || "/hacsfiles/meteocat-card/";
+    this._fadeDuration = parseFloat(this._config.fade_duration) || 0.3; // Configuración de duración del fade
     this._debug = !!this._config.debug;
-    this._log("iconPath set to", this.iconPath);
+    this._log("iconPath set to", this.iconPath, "fadeDuration set to", this._fadeDuration);
     this._entitiesDiscovered = false;
     this.useStaticIcons = !!this._config.option_static_icons;
     this._discoverEntities();
@@ -683,10 +689,51 @@ class MeteocatCard extends HTMLElement {
   }
 
   _toggleForecast(type) {
-    this._currentForecast = type;
-    this._currentSlide = 0;
-    this._sliderValue = 0;
-    this._update();
+    if (this._currentForecast === type) return;
+    const section = this.shadowRoot.querySelector('.forecast-section');
+    const fadeDurationMs = this._fadeDuration * 1000;
+
+    // Si hay una sección existente, aplicar fade-out
+    if (section) {
+      section.style.transition = `opacity ${this._fadeDuration}s ease-in-out`;
+      section.style.opacity = '0';
+
+      // Esperar a que termine el fade-out antes de actualizar
+      setTimeout(() => {
+        this._currentForecast = type;
+        this._currentSlide = 0;
+        this._sliderValue = 0;
+        this._update();
+        // Seleccionar la nueva sección después de la actualización
+        const newSection = this.shadowRoot.querySelector('.forecast-section');
+        if (newSection) {
+          newSection.style.transition = `opacity ${this._fadeDuration}s ease-in-out`;
+          newSection.style.opacity = '0';
+          // Usar requestAnimationFrame para asegurar que el cambio de opacidad se aplique después del renderizado
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              newSection.style.opacity = '1';
+            });
+          });
+        }
+      }, fadeDurationMs);
+    } else {
+      // Si no hay sección existente, actualizar directamente y aplicar fade-in
+      this._currentForecast = type;
+      this._currentSlide = 0;
+      this._sliderValue = 0;
+      this._update();
+      const newSection = this.shadowRoot.querySelector('.forecast-section');
+      if (newSection) {
+        newSection.style.transition = `opacity ${this._fadeDuration}s ease-in-out`;
+        newSection.style.opacity = '0';
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            newSection.style.opacity = '1';
+          });
+        });
+      }
+    }
   }
 
   _getForecastPropFromWeather(forecast, date, propKey) {
@@ -910,7 +957,7 @@ class MeteocatCard extends HTMLElement {
         `;
       } else {
         const message = this._currentForecast === 'hourly' ? getTranslation(this._hass, 'no_hourly_forecast') : getTranslation(this._hass, 'no_forecast_data');
-        forecastHtml += `<div style="padding: 20px; color: var(--secondary-text-color);">${message}</div>`;
+        forecastHtml += `<div class="forecast-section" style="padding: 20px; color: var(--secondary-text-color);">${message}</div>`;
       }
 
       let alertsHtml = '';
@@ -1005,10 +1052,11 @@ class MeteocatCard extends HTMLElement {
             .forecast-toggle { display: flex; gap: 8px; padding: 8px 20px; }
             .toggle-btn { padding: 4px 8px; border: 1px solid var(--divider-color); background: none; cursor: pointer; border-radius: 4px; font-family: sans-serif; }
             .toggle-btn.active { background-color: var(--primary-color); color: white; }
-            .forecast-section { padding: 8px 20px; }
+            .forecast-section { padding: 8px 20px; opacity: 1; transition: opacity ${this._fadeDuration}s ease-in-out; }
             .forecast-title { font-size: 1.1em; font-weight: 500; margin-bottom: 4px; font-family: sans-serif; }
             .forecast-slider { position: relative; }
-            .slider-container { overflow: hidden; width: calc(100px * 4 + 24px); }
+            .slider-container { overflow: hidden; cursor: grab; user-select: none; }
+            .slider-container.dragging { cursor: grabbing; }
             .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); }
             .forecast-item { display: flex; flex-direction: column; align-items: center; padding: 2px; min-width: 100px; margin-right: 8px; }
             .forecast-icon { width: 48px; height: 48px; }
@@ -1072,118 +1120,216 @@ class MeteocatCard extends HTMLElement {
       const hourlyBtn = this.shadowRoot.querySelector('#hourly-btn');
       const sliderTrack = this.shadowRoot.querySelector('.slider-track');
       const sliderBar = this.shadowRoot.querySelector('.slider-bar');
+      const sliderContainer = this.shadowRoot.querySelector('.slider-container');
+      const card = this.shadowRoot.querySelector('ha-card');
 
       if (dailyBtn) dailyBtn.addEventListener('click', () => this._toggleForecast('daily'));
       if (hourlyBtn) hourlyBtn.addEventListener('click', () => this._toggleForecast('hourly'));
 
-      if (sliderTrack && sliderBar) {
-        const itemWidth = 108;
-        const visibleItems = 4;
-        const totalItems = this._currentForecast === 'daily' ? this._dailyForecasts.length : this._hourlyForecasts.length;
-        const maxSlides = Math.max(0, totalItems - visibleItems);
-        const maxTranslate = maxSlides * itemWidth;
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
+      }
+      this.resizeObserver = new ResizeObserver((entries) => {
+        const cardWidth = entries[0].contentRect.width;
+        this.visibleItems = cardWidth < 400 ? 3 : 4;
+        if (sliderContainer) {
+          sliderContainer.style.width = `calc(100px * ${this.visibleItems} + ${8 * (this.visibleItems - 1)}px)`;
+        }
+        this._setupSlider();
+      });
+      if (card) {
+        this.resizeObserver.observe(card);
+      }
 
-        const updateSliderPosition = (percentage, animate = true) => {
-          if (totalItems <= visibleItems) {
-            this._sliderValue = 0;
-            sliderTrack.style.transform = `translateX(0px)`;
-            sliderBar.style.setProperty('--slider-value', `0%`);
-            return;
-          }
-          this._sliderValue = Math.max(0, Math.min(100, percentage));
-          const translateX = (this._sliderValue / 100) * maxTranslate;
-          this._currentSlide = Math.round(translateX / itemWidth);
-          sliderTrack.style.transition = animate ? 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none';
-          sliderTrack.style.transform = `translateX(-${translateX}px)`;
-          sliderBar.style.setProperty('--slider-value', `${this._sliderValue}%`);
-          if (animate) {
-            const onTransitionEnd = () => {
-              sliderTrack.removeEventListener('transitionend', onTransitionEnd);
-            };
-            sliderTrack.addEventListener('transitionend', onTransitionEnd);
-          }
-        };
-
-        const onPointerDown = (event) => {
-          if (totalItems <= visibleItems) return;
-          event.preventDefault();
-          event.stopPropagation();
-          this._isDragging = true;
-          sliderBar.classList.add('dragging');
-          sliderBar.setPointerCapture(event.pointerId);
-        };
-
-        const onPointerUp = (event) => {
-          if (!this._isDragging) return;
-          this._isDragging = false;
-          sliderBar.classList.remove('dragging');
-          sliderBar.releasePointerCapture(event.pointerId);
-          const newSlide = Math.round((this._sliderValue / 100) * maxSlides);
-          const percentage = (newSlide / maxSlides) * 100;
-          updateSliderPosition(percentage);
-        };
-
-        const onPointerMove = (event) => {
-          if (!this._isDragging || totalItems <= visibleItems) return;
-          const { left, width } = sliderBar.getBoundingClientRect();
-          const x = Math.max(0, Math.min(width, event.clientX - left));
-          const percentage = (x / width) * 100;
-          updateSliderPosition(percentage, false);
-        };
-
-        const onClick = (event) => {
-          if (totalItems <= visibleItems) return;
-          event.preventDefault();
-          event.stopPropagation();
-          const { left, width } = sliderBar.getBoundingClientRect();
-          const x = Math.max(0, Math.min(width, event.clientX - left));
-          const percentage = (x / width) * 100;
-          const newSlide = Math.round((percentage / 100) * maxSlides);
-          const adjustedPercentage = (newSlide / maxSlides) * 100;
-          updateSliderPosition(adjustedPercentage);
-        };
-
-        const onTouchStart = (event) => {
-          if ('PointerEvent' in window) return;
-          if (totalItems <= visibleItems) return;
-          event.preventDefault();
-          this._isDragging = true;
-          sliderBar.classList.add('dragging');
-          this._legacySliderTouchCapture = event.touches[0].identifier;
-        };
-
-        const onTouchEnd = () => {
-          if ('PointerEvent' in window) return;
-          if (!this._isDragging) return;
-          this._isDragging = false;
-          sliderBar.classList.remove('dragging');
-          this._legacySliderTouchCapture = undefined;
-          const newSlide = Math.round((this._sliderValue / 100) * maxSlides);
-          const percentage = (newSlide / maxSlides) * 100;
-          updateSliderPosition(percentage);
-        };
-
-        const onTouchMove = (event) => {
-          if ('PointerEvent' in window) return;
-          if (!this._isDragging || this._legacySliderTouchCapture !== event.touches[0].identifier || totalItems <= visibleItems) return;
-          const { left, width } = sliderBar.getBoundingClientRect();
-          const x = Math.max(0, Math.min(width, event.touches[0].clientX - left));
-          const percentage = (x / width) * 100;
-          updateSliderPosition(percentage, false);
-        };
-
-        sliderBar.addEventListener('pointerdown', onPointerDown);
-        sliderBar.addEventListener('pointerup', onPointerUp);
-        sliderBar.addEventListener('pointermove', onPointerMove);
-        sliderBar.addEventListener('click', onClick);
-        sliderBar.addEventListener('touchstart', onTouchStart);
-        sliderBar.addEventListener('touchend', onTouchEnd);
-        sliderBar.addEventListener('touchmove', onTouchMove);
-
-        updateSliderPosition(this._sliderValue, false);
+      if (sliderTrack && sliderBar && sliderContainer) {
+        this._setupSlider();
       }
       this._log("Update completed");
     }, this._updateDebounceDelay);
+  }
+
+  _setupSlider() {
+    const sliderTrack = this.shadowRoot.querySelector('.slider-track');
+    const sliderBar = this.shadowRoot.querySelector('.slider-bar');
+    const sliderContainer = this.shadowRoot.querySelector('.slider-container');
+
+    if (!sliderTrack || !sliderBar || !sliderContainer) return;
+
+    const itemWidth = 108; // 100px width + 8px margin-right
+    const totalItems = this._currentForecast === 'daily' ? this._dailyForecasts.length : this._hourlyForecasts.length;
+    const maxSlides = Math.max(0, totalItems - this.visibleItems);
+    const maxTranslate = maxSlides * itemWidth;
+
+    const updateSliderPosition = (percentage, animate = true) => {
+      if (totalItems <= this.visibleItems) {
+        this._sliderValue = 0;
+        sliderTrack.style.transform = `translateX(0px)`;
+        sliderBar.style.setProperty('--slider-value', `0%`);
+        return;
+      }
+      this._sliderValue = Math.max(0, Math.min(100, percentage));
+      const translateX = (this._sliderValue / 100) * maxTranslate;
+      this._currentSlide = Math.round(translateX / itemWidth);
+      sliderTrack.style.transition = animate ? 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none';
+      sliderTrack.style.transform = `translateX(-${translateX}px)`;
+      sliderBar.style.setProperty('--slider-value', `${this._sliderValue}%`);
+      if (animate) {
+        const onTransitionEnd = () => {
+          sliderTrack.removeEventListener('transitionend', onTransitionEnd);
+        };
+        sliderTrack.addEventListener('transitionend', onTransitionEnd);
+      }
+    };
+
+    // Eventos para el slider-bar
+    let barStartX = 0;
+    const onBarPointerDown = (event) => {
+      if (totalItems <= this.visibleItems) return;
+      event.preventDefault();
+      this._isDragging = true;
+      sliderBar.classList.add('dragging');
+      sliderBar.setPointerCapture(event.pointerId);
+      barStartX = event.clientX;
+    };
+
+    const onBarPointerMove = (event) => {
+      if (!this._isDragging) return;
+      const { left, width } = sliderBar.getBoundingClientRect();
+      const x = Math.max(0, Math.min(width, event.clientX - left));
+      const percentage = (x / width) * 100;
+      updateSliderPosition(percentage, false);
+    };
+
+    const onBarPointerUp = (event) => {
+      if (!this._isDragging) return;
+      this._isDragging = false;
+      sliderBar.classList.remove('dragging');
+      sliderBar.releasePointerCapture(event.pointerId);
+      const newSlide = Math.round((this._sliderValue / 100) * maxSlides);
+      const percentage = (newSlide / maxSlides) * 100;
+      updateSliderPosition(percentage);
+    };
+
+    const onBarClick = (event) => {
+      if (totalItems <= this.visibleItems) return;
+      event.preventDefault();
+      const { left, width } = sliderBar.getBoundingClientRect();
+      const x = Math.max(0, Math.min(width, event.clientX - left));
+      const percentage = (x / width) * 100;
+      const newSlide = Math.round((percentage / 100) * maxSlides);
+      const adjustedPercentage = (newSlide / maxSlides) * 100;
+      updateSliderPosition(adjustedPercentage);
+    };
+
+    // Eventos para drag en container (carrusel)
+    let containerStartX = 0;
+    let containerStartTranslate = 0;
+    const onContainerPointerDown = (event) => {
+      if (totalItems <= this.visibleItems) return;
+      event.preventDefault();
+      this._isDragging = true;
+      sliderContainer.classList.add('dragging');
+      sliderContainer.setPointerCapture(event.pointerId);
+      containerStartX = event.clientX;
+      const transform = window.getComputedStyle(sliderTrack).transform;
+      containerStartTranslate = transform === 'none' ? 0 : parseFloat(transform.split(',')[4].trim());
+    };
+
+    const onContainerPointerMove = (event) => {
+      if (!this._isDragging) return;
+      const delta = event.clientX - containerStartX;
+      let newTranslate = containerStartTranslate + delta;
+      newTranslate = Math.min(0, Math.max(-maxTranslate, newTranslate));
+      sliderTrack.style.transition = 'none';
+      sliderTrack.style.transform = `translateX(${newTranslate}px)`;
+      const percentage = (-newTranslate / maxTranslate) * 100;
+      sliderBar.style.setProperty('--slider-value', `${percentage}%`);
+      this._sliderValue = percentage;
+    };
+
+    const onContainerPointerUp = (event) => {
+      if (!this._isDragging) return;
+      this._isDragging = false;
+      sliderContainer.classList.remove('dragging');
+      sliderContainer.releasePointerCapture(event.pointerId);
+      const currentTranslate = parseFloat(window.getComputedStyle(sliderTrack).transform.split(',')[4].trim());
+      const newSlide = Math.round(-currentTranslate / itemWidth);
+      const percentage = (newSlide / maxSlides) * 100;
+      updateSliderPosition(percentage);
+    };
+
+    // Soporte legacy para touch en slider-bar
+    const onBarTouchStart = (event) => {
+      if ('PointerEvent' in window) return;
+      if (totalItems <= this.visibleItems) return;
+      event.preventDefault();
+      this._isDragging = true;
+      sliderBar.classList.add('dragging');
+      this._legacySliderTouchCapture = event.touches[0].identifier;
+      barStartX = event.touches[0].clientX;
+    };
+
+    const onBarTouchMove = (event) => {
+      if ('PointerEvent' in window) return;
+      if (!this._isDragging || this._legacySliderTouchCapture !== event.touches[0].identifier) return;
+      event.preventDefault();
+      const { left, width } = sliderBar.getBoundingClientRect();
+      const x = Math.max(0, Math.min(width, event.touches[0].clientX - left));
+      const percentage = (x / width) * 100;
+      updateSliderPosition(percentage, false);
+    };
+
+    const onBarTouchEnd = () => {
+      if ('PointerEvent' in window) return;
+      if (!this._isDragging) return;
+      this._isDragging = false;
+      sliderBar.classList.remove('dragging');
+      this._legacySliderTouchCapture = undefined;
+      const newSlide = Math.round((this._sliderValue / 100) * maxSlides);
+      const percentage = (newSlide / maxSlides) * 100;
+      updateSliderPosition(percentage);
+    };
+
+    // Limpiar eventos anteriores si existen
+    sliderBar.removeEventListener('pointerdown', this._onBarPointerDown);
+    sliderBar.removeEventListener('pointermove', this._onBarPointerMove);
+    sliderBar.removeEventListener('pointerup', this._onBarPointerUp);
+    sliderBar.removeEventListener('click', this._onBarClick);
+    sliderBar.removeEventListener('touchstart', this._onBarTouchStart);
+    sliderBar.removeEventListener('touchmove', this._onBarTouchMove);
+    sliderBar.removeEventListener('touchend', this._onBarTouchEnd);
+
+    sliderContainer.removeEventListener('pointerdown', this._onContainerPointerDown);
+    sliderContainer.removeEventListener('pointermove', this._onContainerPointerMove);
+    sliderContainer.removeEventListener('pointerup', this._onContainerPointerUp);
+
+    // Asignar nuevos eventos
+    this._onBarPointerDown = onBarPointerDown;
+    this._onBarPointerMove = onBarPointerMove;
+    this._onBarPointerUp = onBarPointerUp;
+    this._onBarClick = onBarClick;
+    this._onBarTouchStart = onBarTouchStart;
+    this._onBarTouchMove = onBarTouchMove;
+    this._onBarTouchEnd = onBarTouchEnd;
+
+    this._onContainerPointerDown = onContainerPointerDown;
+    this._onContainerPointerMove = onContainerPointerMove;
+    this._onContainerPointerUp = onContainerPointerUp;
+
+    sliderBar.addEventListener('pointerdown', onBarPointerDown);
+    sliderBar.addEventListener('pointermove', onBarPointerMove);
+    sliderBar.addEventListener('pointerup', onBarPointerUp);
+    sliderBar.addEventListener('click', onBarClick);
+    sliderBar.addEventListener('touchstart', onBarTouchStart, { passive: false });
+    sliderBar.addEventListener('touchmove', onBarTouchMove, { passive: false });
+    sliderBar.addEventListener('touchend', onBarTouchEnd);
+
+    sliderContainer.addEventListener('pointerdown', onContainerPointerDown);
+    sliderContainer.addEventListener('pointermove', onContainerPointerMove);
+    sliderContainer.addEventListener('pointerup', onContainerPointerUp);
+
+    // Inicializar posición
+    updateSliderPosition(this._sliderValue, false);
   }
 
   _getIconFile(condition, isDay) {
@@ -1215,6 +1361,12 @@ class MeteocatCard extends HTMLElement {
 
   getCardSize() {
     return 6;
+  }
+
+  disconnectedCallback() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
   }
 }
 
