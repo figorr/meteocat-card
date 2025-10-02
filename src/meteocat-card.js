@@ -538,6 +538,7 @@ class MeteocatCard extends HTMLElement {
       this._config.alerts_entity = findByKey("alerts") || this._config.alerts_entity;
       this._config.sunrise_entity = findByKey("sunrise") || "sensor.sun_next_rising";
       this._config.sunset_entity = findByKey("sunset") || "sensor.sun_next_setting";
+      this._config.station_timestamp_entity = findByKey("station_timestamp") || this._config.station_timestamp_entity;
 
       const alertKeys = [
         "alert_wind",
@@ -565,6 +566,7 @@ class MeteocatCard extends HTMLElement {
         alerts: this._config.alerts_entity,
         sunrise: this._config.sunrise_entity,
         sunset: this._config.sunset_entity,
+        station_timestamp: this._config.station_timestamp_entity,
         ...alertKeys.reduce((acc, key) => ({ ...acc, [key]: this._config[`${key}_entity`] }), {})
       });
 
@@ -647,6 +649,43 @@ class MeteocatCard extends HTMLElement {
       });
       return `${dayAbbr} ${dateFormatted} ${timeStr}`;
     }
+  }
+
+  _formatStationTimestamp(timestamp) {
+    if (!timestamp || !isFinite(new Date(timestamp).getTime())) {
+      this._log("Invalid station timestamp", timestamp);
+      return "-";
+    }
+
+    const date = new Date(timestamp);
+    const lang = this._hass?.language || 'es-ES';
+
+    const hour = date.toLocaleTimeString(lang, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: this._hass?.time_zone || "Europe/Madrid",
+    });
+
+    const days = [
+      getTranslation(this._hass, 'sun').toLowerCase(),
+      getTranslation(this._hass, 'mon').toLowerCase(),
+      getTranslation(this._hass, 'tue').toLowerCase(),
+      getTranslation(this._hass, 'wed').toLowerCase(),
+      getTranslation(this._hass, 'thu').toLowerCase(),
+      getTranslation(this._hass, 'fri').toLowerCase(),
+      getTranslation(this._hass, 'sat').toLowerCase(),
+    ];
+    const dayAbbr = days[date.getDay()];
+
+    const dayNum = date.getDate();
+    const monthAbbr = date.toLocaleDateString(lang, {
+      month: 'short',
+      timeZone: this._hass?.time_zone || "Europe/Madrid",
+    }).toLowerCase().replace('.', '');
+    const year = date.getFullYear();
+
+    return `${hour}, ${dayAbbr} ${dayNum} ${monthAbbr} ${year}`;
   }
 
   _formatForecastDate(timestamp) {
@@ -868,6 +907,7 @@ class MeteocatCard extends HTMLElement {
       const sunset = this._hass.states[this._config.sunset_entity];
       const alertsEntity = this._config.alerts_entity ? this._hass.states[this._config.alerts_entity] : null;
       const townName = this._config.town_name_entity ? this._hass.states[this._config.town_name_entity]?.state ?? "-" : "-";
+      const stationTimestamp = this._config.station_timestamp_entity ? this._hass.states[this._config.station_timestamp_entity] : null;
 
       if (!entity) {
         this._content.innerHTML = `<ha-card>
@@ -1056,11 +1096,14 @@ class MeteocatCard extends HTMLElement {
         alertsHtml += `</div>`;
       }
 
+      const formattedTimestamp = this._formatStationTimestamp(stationTimestamp?.state);
+
       this._content.innerHTML = `
         <ha-card>
           <style>
             .header { font-size: 1.8em; font-weight: normal; margin: 8px 20px 0; font-family: sans-serif; }
-            .town-name { font-size: 1.2em; color: var(--secondary-text-color); margin: 0 20px 8px; font-family: sans-serif; }
+            .town-name { font-size: 1.2em; color: var(--secondary-text-color); margin: 0 20px 0; font-family: sans-serif; }
+            .station-timestamp { font-size: 0.8em; color: var(--secondary-text-color); margin: 0 20px 8px; font-family: sans-serif; }
             .current { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 2px; }
             .current-left { display: flex; align-items: center; gap: 8px; }
             .current-left img { width: 100px; height: 100px; }
@@ -1105,6 +1148,7 @@ class MeteocatCard extends HTMLElement {
 
           <div class="header">Meteocat</div>
           <div class="town-name">${townName}</div>
+          <div class="station-timestamp">${formattedTimestamp}</div>
 
           <div class="current">
             <div class="current-left">
