@@ -658,9 +658,16 @@ class MeteocatCard extends HTMLElement {
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    const dateStr = date.toISOString().split("T")[0];
-    const todayStr = today.toISOString().split("T")[0];
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    const getLocalDateString = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const dateStr = getLocalDateString(date);
+    const todayStr = getLocalDateString(today);
+    const tomorrowStr = getLocalDateString(tomorrow);
 
     const days = [
       getTranslation(this._hass, 'sun'),
