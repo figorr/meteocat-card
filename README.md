@@ -302,7 +302,7 @@ We welcome contributions in any form: bug reports, new features, or improvements
 3. **Set up your development environment**
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/meteocat-card.git
+   git clone https://github.com/figorr/meteocat-card.git
    cd meteocat-card
    npm install
    ```
