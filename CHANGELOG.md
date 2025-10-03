@@ -1,3 +1,15 @@
+# [2.1.0](https://github.com/figorr/meteocat-card/compare/v2.0.2...v2.1.0) (2025-10-03)
+
+
+### Bug Fixes
+
+* fix forecast date change at midnight ([d72f6d9](https://github.com/figorr/meteocat-card/commit/d72f6d942b5a96ebacbb378cc51a3adac1fed6e2))
+
+
+### Features
+
+* new station timestamp sensor under town name ([fac94e1](https://github.com/figorr/meteocat-card/commit/fac94e1775f2a1813020aa710450a8a231b413ec))
+
 ## [2.0.2](https://github.com/figorr/meteocat-card/compare/v2.0.1...v2.0.2) (2025-10-01)
 
 
