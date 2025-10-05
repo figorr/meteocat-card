@@ -1233,8 +1233,8 @@ class MeteocatCard extends HTMLElement {
             <div class="detail"><ha-icon icon="mdi:weather-rainy"></ha-icon>${getTranslation(this._hass, 'precipitation', { value: precipitation?.state ?? entity.attributes?.precipitation ?? "-" })}</div>
             <div class="detail"><ha-icon icon="mdi:weather-pouring"></ha-icon>${getTranslation(this._hass, 'precipitation_probability', { value: precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-" })}</div>
             <div class="detail"><ha-icon icon="mdi:gauge"></ha-icon>${getTranslation(this._hass, 'pressure', { value: entity.attributes?.pressure ?? "-" })}</div>
-            <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: `UV ${entity.attributes?.uv_index ?? "-"}` })}</div>
             <div class="detail"><ha-icon icon="mdi:flash"></ha-icon>${getTranslation(this._hass, 'lightning_town', { value: lightningTown?.state ?? "-" })}</div>
+            <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: `UV ${entity.attributes?.uv_index ?? "-"}` })}</div>
             <div class="detail"><ha-icon icon="${this._getMoonIcon(moonPhase?.state)}"></ha-icon>${getTranslation(this._hass, 'moon_phase', { value: translatedMoonPhase })}</div>
             <div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>
             <div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>
