@@ -17,6 +17,10 @@ const translations = {
     uv_index: "{value}",
     sunrise: "{value}",
     sunset: "{value}",
+    lightning_town: "{value}",
+    moon_phase: "{value}",
+    moonrise: "{value}",
+    moonset: "{value}",
     daily_forecast: "Daily Forecast",
     hourly_forecast: "Hourly Forecast",
     daily: "Daily",
@@ -54,6 +58,14 @@ const translations = {
     fri: "Fri",
     sat: "Sat",
     unknown: "Unknown",
+    new_moon: "New Moon",
+    waxing_crescent: "Waxing Crescent",
+    first_quarter: "First Quarter",
+    waxing_gibbous: "Waxing Gibbous",
+    full_moon: "Full Moon",
+    waning_gibbous: "Waning Gibbous",
+    last_quarter: "Last Quarter",
+    waning_crescent: "Waning Crescent",
     clear: "Clear",
     clear_night: "Clear Night",
     sunny: "Sunny",
@@ -148,6 +160,10 @@ const translations = {
     uv_index: "{value}",
     sunrise: "{value}",
     sunset: "{value}",
+    lightning_town: "{value}",
+    moon_phase: "{value}",
+    moonrise: "{value}",
+    moonset: "{value}",
     daily_forecast: "Pronóstico diario",
     hourly_forecast: "Pronóstico horario",
     daily: "Diario",
@@ -185,6 +201,14 @@ const translations = {
     fri: "Vie",
     sat: "Sáb",
     unknown: "Desconocido",
+    new_moon: "Luna nueva",
+    waxing_crescent: "Creciente iluminante",
+    first_quarter: "Cuarto creciente",
+    waxing_gibbous: "Gibosa creciente",
+    full_moon: "Luna llena",
+    waning_gibbous: "Gibosa menguante",
+    last_quarter: "Cuarto menguante",
+    waning_crescent: "Menguante iluminante",
     clear: "Despejado",
     clear_night: "Noche despejada",
     sunny: "Soleado",
@@ -279,6 +303,10 @@ const translations = {
     uv_index: "{value}",
     sunrise: "{value}",
     sunset: "{value}",
+    lightning_town: "{value}",
+    moon_phase: "{value}",
+    moonrise: "{value}",
+    moonset: "{value}",
     daily_forecast: "Previsió diària",
     hourly_forecast: "Previsió horària",
     daily: "Diari",
@@ -316,6 +344,14 @@ const translations = {
     fri: "Dv",
     sat: "Ds",
     unknown: "Desconegut",
+    new_moon: "Lluna nova",
+    waxing_crescent: "Creixent il·luminant",
+    first_quarter: "Quart creixent",
+    waxing_gibbous: "Gibosa creixent",
+    full_moon: "Lluna plena",
+    waning_gibbous: "Gibosa minvant",
+    last_quarter: "Quart minvant",
+    waning_crescent: "Minvant il·luminant",
     clear: "Clar",
     clear_night: "Nit serena",
     sunny: "Assolellat",
@@ -538,6 +574,10 @@ class MeteocatCard extends HTMLElement {
       this._config.alerts_entity = findByKey("alerts") || this._config.alerts_entity;
       this._config.sunrise_entity = findByKey("sunrise") || "sensor.sun_next_rising";
       this._config.sunset_entity = findByKey("sunset") || "sensor.sun_next_setting";
+      this._config.lightning_town_entity = findByKey("lightning_town") || this._config.lightning_town_entity;
+      this._config.moon_phase_entity = findByKey("moon_phase") || this._config.moon_phase_entity;
+      this._config.moonrise_entity = findByKey("moonrise") || this._config.moonrise_entity;
+      this._config.moonset_entity = findByKey("moonset") || this._config.moonset_entity;
       this._config.station_timestamp_entity = findByKey("station_timestamp") || this._config.station_timestamp_entity;
 
       const alertKeys = [
@@ -566,6 +606,10 @@ class MeteocatCard extends HTMLElement {
         alerts: this._config.alerts_entity,
         sunrise: this._config.sunrise_entity,
         sunset: this._config.sunset_entity,
+        lightning_town: this._config.lightning_town_entity,
+        moon_phase: this._config.moon_phase_entity,
+        moonrise: this._config.moonrise_entity,
+        moonset: this._config.moonset_entity,
         station_timestamp: this._config.station_timestamp_entity,
         ...alertKeys.reduce((acc, key) => ({ ...acc, [key]: this._config[`${key}_entity`] }), {})
       });
@@ -890,6 +934,21 @@ class MeteocatCard extends HTMLElement {
     return now >= sunriseTime && now < sunsetTime;
   }
 
+  _getMoonIcon(phase) {
+    const icon_map = {
+      "new_moon": "mdi:moon-new",
+      "waxing_crescent": "mdi:moon-waxing-crescent",
+      "first_quarter": "mdi:moon-first-quarter",
+      "waxing_gibbous": "mdi:moon-waxing-gibbous",
+      "full_moon": "mdi:moon-full",
+      "waning_gibbous": "mdi:moon-waning-gibbous",
+      "last_quarter": "mdi:moon-last-quarter",
+      "waning_crescent": "mdi:moon-waning-crescent",
+      "unknown": "mdi:moon",
+    };
+    return icon_map[phase] || "mdi:moon";
+  }
+
   async _update() {
     if (this._updateTimeout) {
       clearTimeout(this._updateTimeout);
@@ -905,6 +964,10 @@ class MeteocatCard extends HTMLElement {
       const precipitationProbability = this._config.precipitation_probability_entity ? this._hass.states[this._config.precipitation_probability_entity] : null;
       const sunrise = this._hass.states[this._config.sunrise_entity];
       const sunset = this._hass.states[this._config.sunset_entity];
+      const lightningTown = this._config.lightning_town_entity ? this._hass.states[this._config.lightning_town_entity] : null;
+      const moonPhase = this._config.moon_phase_entity ? this._hass.states[this._config.moon_phase_entity] : null;
+      const moonrise = this._hass.states[this._config.moonrise_entity];
+      const moonset = this._hass.states[this._config.moonset_entity];
       const alertsEntity = this._config.alerts_entity ? this._hass.states[this._config.alerts_entity] : null;
       const townName = this._config.town_name_entity ? this._hass.states[this._config.town_name_entity]?.state ?? "-" : "-";
       const stationTimestamp = this._config.station_timestamp_entity ? this._hass.states[this._config.station_timestamp_entity] : null;
@@ -1097,6 +1160,7 @@ class MeteocatCard extends HTMLElement {
       }
 
       const formattedTimestamp = this._formatStationTimestamp(stationTimestamp?.state);
+      const translatedMoonPhase = getTranslation(this._hass, moonPhase?.state || 'unknown');
 
       this._content.innerHTML = `
         <ha-card>
@@ -1169,9 +1233,13 @@ class MeteocatCard extends HTMLElement {
             <div class="detail"><ha-icon icon="mdi:weather-rainy"></ha-icon>${getTranslation(this._hass, 'precipitation', { value: precipitation?.state ?? entity.attributes?.precipitation ?? "-" })}</div>
             <div class="detail"><ha-icon icon="mdi:weather-pouring"></ha-icon>${getTranslation(this._hass, 'precipitation_probability', { value: precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-" })}</div>
             <div class="detail"><ha-icon icon="mdi:gauge"></ha-icon>${getTranslation(this._hass, 'pressure', { value: entity.attributes?.pressure ?? "-" })}</div>
-            <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: entity.attributes?.uv_index ?? "-" })}</div>
+            <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: `UV ${entity.attributes?.uv_index ?? "-"}` })}</div>
+            <div class="detail"><ha-icon icon="mdi:flash"></ha-icon>${getTranslation(this._hass, 'lightning_town', { value: lightningTown?.state ?? "-" })}</div>
+            <div class="detail"><ha-icon icon="${this._getMoonIcon(moonPhase?.state)}"></ha-icon>${getTranslation(this._hass, 'moon_phase', { value: translatedMoonPhase })}</div>
             <div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>
             <div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>
+            <div class="detail"><ha-icon icon="mdi:weather-moonset-down"></ha-icon>${getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) })}</div>
+            <div class="detail"><ha-icon icon="mdi:weather-moonset-up"></ha-icon>${getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) })}</div>
           </div>
 
           ${forecastHtml}
