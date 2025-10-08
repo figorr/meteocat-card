@@ -507,6 +507,8 @@ class MeteocatCard extends HTMLElement {
       iconPath: "/hacsfiles/meteocat-card/",
       debug: false,
       fade_duration: 0.3, // Duración por defecto del fade
+      option_show_sun: true,
+      option_show_moon: true,
     };
   }
 
@@ -518,6 +520,8 @@ class MeteocatCard extends HTMLElement {
       iconPath: "/hacsfiles/meteocat-card/",
       debug: false,
       fade_duration: 0.3, // Duración por defecto del fade
+      option_show_sun: true,
+      option_show_moon: true,
       ...config,
       title: undefined,
       sunrise_entity: undefined,
@@ -1162,6 +1166,36 @@ class MeteocatCard extends HTMLElement {
       const formattedTimestamp = this._formatStationTimestamp(stationTimestamp?.state);
       const translatedMoonPhase = getTranslation(this._hass, moonPhase?.state || 'unknown');
 
+      let detailsHtml = `
+        <div class="details">
+          <div class="detail"><ha-icon icon="mdi:thermometer-high"></ha-icon>${getTranslation(this._hass, 'max_temp', { value: forecastMax?.state ?? "-" })}</div>
+          <div class="detail"><ha-icon icon="mdi:thermometer-low"></ha-icon>${getTranslation(this._hass, 'min_temp', { value: forecastMin?.state ?? "-" })}</div>
+          <div class="detail"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: entity.attributes?.humidity ?? "-" })}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-windy"></ha-icon>${windDisplay}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-rainy"></ha-icon>${getTranslation(this._hass, 'precipitation', { value: precipitation?.state ?? entity.attributes?.precipitation ?? "-" })}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-pouring"></ha-icon>${getTranslation(this._hass, 'precipitation_probability', { value: precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-" })}</div>
+          <div class="detail"><ha-icon icon="mdi:gauge"></ha-icon>${getTranslation(this._hass, 'pressure', { value: entity.attributes?.pressure ?? "-" })}</div>
+          <div class="detail"><ha-icon icon="mdi:flash"></ha-icon>${getTranslation(this._hass, 'lightning_town', { value: lightningTown?.state ?? "-" })}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: `UV ${entity.attributes?.uv_index ?? "-"}` })}</div>
+          <div class="detail"><ha-icon icon="${this._getMoonIcon(moonPhase?.state)}"></ha-icon>${getTranslation(this._hass, 'moon_phase', { value: translatedMoonPhase })}</div>
+      `;
+
+      if (this._config.option_show_sun) {
+        detailsHtml += `
+          <div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>
+        `;
+      }
+
+      if (this._config.option_show_moon) {
+        detailsHtml += `
+          <div class="detail"><ha-icon icon="mdi:weather-moonset-down"></ha-icon>${getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) })}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-moonset-up"></ha-icon>${getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) })}</div>
+        `;
+      }
+
+      detailsHtml += `</div>`;
+
       this._content.innerHTML = `
         <ha-card>
           <style>
@@ -1225,22 +1259,7 @@ class MeteocatCard extends HTMLElement {
             </div>
           </div>
 
-          <div class="details">
-            <div class="detail"><ha-icon icon="mdi:thermometer-high"></ha-icon>${getTranslation(this._hass, 'max_temp', { value: forecastMax?.state ?? "-" })}</div>
-            <div class="detail"><ha-icon icon="mdi:thermometer-low"></ha-icon>${getTranslation(this._hass, 'min_temp', { value: forecastMin?.state ?? "-" })}</div>
-            <div class="detail"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: entity.attributes?.humidity ?? "-" })}</div>
-            <div class="detail"><ha-icon icon="mdi:weather-windy"></ha-icon>${windDisplay}</div>
-            <div class="detail"><ha-icon icon="mdi:weather-rainy"></ha-icon>${getTranslation(this._hass, 'precipitation', { value: precipitation?.state ?? entity.attributes?.precipitation ?? "-" })}</div>
-            <div class="detail"><ha-icon icon="mdi:weather-pouring"></ha-icon>${getTranslation(this._hass, 'precipitation_probability', { value: precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-" })}</div>
-            <div class="detail"><ha-icon icon="mdi:gauge"></ha-icon>${getTranslation(this._hass, 'pressure', { value: entity.attributes?.pressure ?? "-" })}</div>
-            <div class="detail"><ha-icon icon="mdi:flash"></ha-icon>${getTranslation(this._hass, 'lightning_town', { value: lightningTown?.state ?? "-" })}</div>
-            <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: `UV ${entity.attributes?.uv_index ?? "-"}` })}</div>
-            <div class="detail"><ha-icon icon="${this._getMoonIcon(moonPhase?.state)}"></ha-icon>${getTranslation(this._hass, 'moon_phase', { value: translatedMoonPhase })}</div>
-            <div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>
-            <div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>
-            <div class="detail"><ha-icon icon="mdi:weather-moonset-down"></ha-icon>${getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) })}</div>
-            <div class="detail"><ha-icon icon="mdi:weather-moonset-up"></ha-icon>${getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) })}</div>
-          </div>
+          ${detailsHtml}
 
           ${forecastHtml}
 

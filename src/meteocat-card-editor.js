@@ -11,6 +11,8 @@ const translations = {
     icon_path_type_hacs: "HACS installation",
     icon_path_type_manual: "Manual installation",
     debug: "Enable debug logging",
+    option_show_sun: "Sun sensors (sunrise/sunset)",
+    option_show_moon: "Moon sensors (moonrise/moonset)",
   },
   es: {
     title_default: "Meteocat",
@@ -23,6 +25,8 @@ const translations = {
     icon_path_type_hacs: "Instalación HACS",
     icon_path_type_manual: "Instalación manual",
     debug: "Habilitar registro de depuración",
+    option_show_sun: "Sensores de sol (amanecer/atardecer)",
+    option_show_moon: "Sensores de luna (salida/puesta)",
   },
   ca: {
     title_default: "Meteocat",
@@ -35,6 +39,8 @@ const translations = {
     icon_path_type_hacs: "Instal·lació HACS",
     icon_path_type_manual: "Instal·lació manual",
     debug: "Habilitar registre de depuració",
+    option_show_sun: "Sensors de sol (sortida/posta de sol)",
+    option_show_moon: "Sensors de lluna (sortida/posta)",
   },
 };
 
@@ -64,6 +70,8 @@ class MeteocatCardEditor extends HTMLElement {
       entity: "weather.home",
       option_static_icons: false,
       icon_path_type: "hacs",
+      option_show_sun: true,
+      option_show_moon: true,
       debug: false,
       ...config,
       title: undefined,
@@ -123,6 +131,14 @@ class MeteocatCardEditor extends HTMLElement {
         name: "option_static_icons",
         selector: { boolean: {} },
       },
+      {
+        name: "option_show_sun",
+        selector: { boolean: {} },
+      },
+      {
+        name: "option_show_moon",
+        selector: { boolean: {} },
+      },
     ];
   }
 
@@ -162,6 +178,8 @@ class MeteocatCardEditor extends HTMLElement {
         entity: this._config.entity,
         option_static_icons: this._config.option_static_icons,
         icon_path_type: this._config.icon_path_type || "hacs",
+        option_show_sun: this._config.option_show_sun,
+        option_show_moon: this._config.option_show_moon,
         debug: this._config.debug,
       };
       form.schema = this._schema();
@@ -178,11 +196,14 @@ class MeteocatCardEditor extends HTMLElement {
           option_static_icons: ev.detail.value.option_static_icons,
           icon_path_type: ev.detail.value.icon_path_type,
           iconPath: ev.detail.value.icon_path_type === "hacs" ? "/hacsfiles/meteocat-card/" : "/local/meteocat-card/icons/",
+          fade_duration: this._config.fade_duration,
+          option_show_sun: ev.detail.value.option_show_sun,
+          option_show_moon: ev.detail.value.option_show_moon,
           debug: ev.detail.value.debug,
         };
         // Mantener cualquier otra propiedad existente que no esté en el formulario
         Object.keys(this._config).forEach((key) => {
-          if (!["type", "entity", "option_static_icons", "icon_path_type", "iconPath", "debug"].includes(key)) {
+          if (!["type", "entity", "option_static_icons", "icon_path_type", "iconPath", "fade_duration", "option_show_sun", "option_show_moon", "debug"].includes(key)) {
             updatedConfig[key] = this._config[key];
           }
         });
