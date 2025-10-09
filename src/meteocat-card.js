@@ -18,6 +18,7 @@ const translations = {
     sunrise: "{value}",
     sunset: "{value}",
     lightning_town: "{value}",
+    lightning_region: "{value}",
     moon_phase: "{value}",
     moonrise: "{value}",
     moonset: "{value}",
@@ -161,6 +162,7 @@ const translations = {
     sunrise: "{value}",
     sunset: "{value}",
     lightning_town: "{value}",
+    lightning_region: "{value}",
     moon_phase: "{value}",
     moonrise: "{value}",
     moonset: "{value}",
@@ -304,6 +306,7 @@ const translations = {
     sunrise: "{value}",
     sunset: "{value}",
     lightning_town: "{value}",
+    lightning_region: "{value}",
     moon_phase: "{value}",
     moonrise: "{value}",
     moonset: "{value}",
@@ -579,6 +582,7 @@ class MeteocatCard extends HTMLElement {
       this._config.sunrise_entity = findByKey("sunrise") || "sensor.sun_next_rising";
       this._config.sunset_entity = findByKey("sunset") || "sensor.sun_next_setting";
       this._config.lightning_town_entity = findByKey("lightning_town") || this._config.lightning_town_entity;
+      this._config.lightning_region_entity = findByKey("lightning_region") || this._config.lightning_region_entity;
       this._config.moon_phase_entity = findByKey("moon_phase") || this._config.moon_phase_entity;
       this._config.moonrise_entity = findByKey("moonrise") || this._config.moonrise_entity;
       this._config.moonset_entity = findByKey("moonset") || this._config.moonset_entity;
@@ -611,6 +615,7 @@ class MeteocatCard extends HTMLElement {
         sunrise: this._config.sunrise_entity,
         sunset: this._config.sunset_entity,
         lightning_town: this._config.lightning_town_entity,
+        lightning_region: this._config.lightning_region_entity,
         moon_phase: this._config.moon_phase_entity,
         moonrise: this._config.moonrise_entity,
         moonset: this._config.moonset_entity,
@@ -969,6 +974,7 @@ class MeteocatCard extends HTMLElement {
       const sunrise = this._hass.states[this._config.sunrise_entity];
       const sunset = this._hass.states[this._config.sunset_entity];
       const lightningTown = this._config.lightning_town_entity ? this._hass.states[this._config.lightning_town_entity] : null;
+      const lightningRegion = this._config.lightning_region_entity ? this._hass.states[this._config.lightning_region_entity] : null;
       const moonPhase = this._config.moon_phase_entity ? this._hass.states[this._config.moon_phase_entity] : null;
       const moonrise = this._hass.states[this._config.moonrise_entity];
       const moonset = this._hass.states[this._config.moonset_entity];
@@ -1175,7 +1181,7 @@ class MeteocatCard extends HTMLElement {
           <div class="detail"><ha-icon icon="mdi:weather-rainy"></ha-icon>${getTranslation(this._hass, 'precipitation', { value: precipitation?.state ?? entity.attributes?.precipitation ?? "-" })}</div>
           <div class="detail"><ha-icon icon="mdi:weather-pouring"></ha-icon>${getTranslation(this._hass, 'precipitation_probability', { value: precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-" })}</div>
           <div class="detail"><ha-icon icon="mdi:gauge"></ha-icon>${getTranslation(this._hass, 'pressure', { value: entity.attributes?.pressure ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:flash"></ha-icon>${getTranslation(this._hass, 'lightning_town', { value: lightningTown?.state ?? "-" })}</div>
+          <div class="detail"><ha-icon icon="mdi:flash"></ha-icon>${lightningTown?.state ?? "-"} / ${lightningRegion?.state ?? "-"}</div>
           <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: `UV ${entity.attributes?.uv_index ?? "-"}` })}</div>
           <div class="detail"><ha-icon icon="${this._getMoonIcon(moonPhase?.state)}"></ha-icon>${getTranslation(this._hass, 'moon_phase', { value: translatedMoonPhase })}</div>
       `;
