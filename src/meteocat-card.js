@@ -700,7 +700,7 @@ class MeteocatCard extends HTMLElement {
         month: "2-digit",
         timeZone: this._hass?.time_zone || "Europe/Madrid",
       });
-      return `${dayAbbr} ${dateFormatted} ${timeStr}`;
+      return `${dayAbbr} (${dateFormatted}) ${timeStr}`;
     }
   }
 
