@@ -145,7 +145,9 @@
     ├── current_example_no_alerts.png
     ├── custom_card_menu.png
     ├── daily_forecast_2_alerts.png
+    ├── daily_forecast_no_alerts.png
     ├── houryly_forecast_2_alerts.png
+    ├── houryly_forecast_no_alerts.png
     ├── icon_path_code_editor.png
     ├── icon_path_visual_editor.png
     ├── remove_hacs.png
