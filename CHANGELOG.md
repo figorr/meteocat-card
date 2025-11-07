@@ -1,3 +1,25 @@
+# [3.0.0](https://github.com/figorr/meteocat-card/compare/v2.2.0...v3.0.0) (2025-11-07)
+
+🌤️ Release Meteocat Card v3.0.0 — enhanced solar, lunar, and forecast display
+
+This major update introduces new solar and lunar information directly into the card, along with several UI and customization improvements.
+Meteocat v4.0.0 is required to use this new card version. Please, update Meteocat integration first to v4.0.0.
+
+## ✨ Highlights:
+- Added solar and lunar data visualization (sunrise, sunset, moonrise, moonset, illumination, etc.).
+- Added display of global solar irradiance information.
+- Added lightning data indicators (town / regional lightning counts).
+- Improved the card editor with new options and better usability.
+- Added configuration options to show or hide solar and lunar sections.
+- Added option to switch the default forecast view between daily and hourly modes.
+
+## 🛠 Changes:
+Enhanced layout and configurability to provide a more complete and flexible weather overview experience.
+
+## ⚠️ Note:
+- This version is a major feature release (v3.0.0) due to the significant number of improvements.
+- This card version requires Meteocat v4.0.0 to properly work.
+
 # [2.2.0](https://github.com/figorr/meteocat-card/compare/v2.1.0...v2.2.0) (2025-11-07)
 
 
