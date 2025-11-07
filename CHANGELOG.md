@@ -1,3 +1,17 @@
+# [2.2.0](https://github.com/figorr/meteocat-card/compare/v2.1.0...v2.2.0) (2025-11-07)
+
+
+### Bug Fixes
+
+* fix formatTimestamp look for future events ([92158af](https://github.com/figorr/meteocat-card/commit/92158afa07b133ef8cd8acb9bc3a9757b87e6da8))
+
+
+### Features
+
+* add lightning region sensor ([b4b49d6](https://github.com/figorr/meteocat-card/commit/b4b49d608bceecaccc3b7359b00121251fa8a834))
+* new lightning town and moon sensors ([8d14552](https://github.com/figorr/meteocat-card/commit/8d14552f0deb089e16840d4b46d7afac3690fda0))
+* option to enable/disable sun and moon sensors ([040c799](https://github.com/figorr/meteocat-card/commit/040c799e0fe99fdd929c287da750793dc9be36b1))
+
 # [2.1.0](https://github.com/figorr/meteocat-card/compare/v2.0.2...v2.1.0) (2025-10-03)
 
 
