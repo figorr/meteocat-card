@@ -11,15 +11,20 @@ const translations = {
     humidity: "{value}%",
     wind: "{value}",
     gust: "Gust",
-    precipitation: "{value} mm",
+    precipitation: "{value}",
     precipitation_probability: "{value}%",
     pressure: "{value} hPa",
     uv_index: "{value}",
+    solar_global_irradiance: "{value} W/m²",
+    below_horizon: "Below horizon",
+    above_horizon: "Above horizon",
+    azimuth: "{value}°",
     sunrise: "{value}",
     sunset: "{value}",
     lightning_town: "{value}",
     lightning_region: "{value}",
     moon_phase: "{value}",
+    illuminated_percentage: "{value}%",
     moonrise: "{value}",
     moonset: "{value}",
     daily_forecast: "Daily Forecast",
@@ -50,7 +55,7 @@ const translations = {
     umbral: "Threshold",
     peligro: "Danger",
     nivel: "Level",
-    attribution: "Powered by Meteocatpy",
+    attribution: "Powered by Meteocatpy & Solarmoonpy",
     sun: "Sun",
     mon: "Mon",
     tue: "Tue",
@@ -155,15 +160,20 @@ const translations = {
     humidity: "{value}%",
     wind: "{value}",
     gust: "Ráfaga",
-    precipitation: "{value} mm",
+    precipitation: "{value}",
     precipitation_probability: "{value}%",
     pressure: "{value} hPa",
     uv_index: "{value}",
+    solar_global_irradiance: "{value} W/m²",
+    below_horizon: "Bajo horizonte",
+    above_horizon: "Sobre horizonte",
+    azimuth: "{value}°",
     sunrise: "{value}",
     sunset: "{value}",
     lightning_town: "{value}",
     lightning_region: "{value}",
     moon_phase: "{value}",
+    illuminated_percentage: "{value}%",
     moonrise: "{value}",
     moonset: "{value}",
     daily_forecast: "Pronóstico diario",
@@ -194,7 +204,7 @@ const translations = {
     umbral: "Umbral",
     peligro: "Peligro",
     nivel: "Nivel",
-    attribution: "Powered by Meteocatpy",
+    attribution: "Powered by Meteocatpy & Solarmoonpy",
     sun: "Dom",
     mon: "Lun",
     tue: "Mar",
@@ -204,13 +214,13 @@ const translations = {
     sat: "Sáb",
     unknown: "Desconocido",
     new_moon: "Luna nueva",
-    waxing_crescent: "Creciente iluminante",
+    waxing_crescent: "Luna creciente",
     first_quarter: "Cuarto creciente",
     waxing_gibbous: "Gibosa creciente",
     full_moon: "Luna llena",
     waning_gibbous: "Gibosa menguante",
     last_quarter: "Cuarto menguante",
-    waning_crescent: "Menguante iluminante",
+    waning_crescent: "Luna menguante",
     clear: "Despejado",
     clear_night: "Noche despejada",
     sunny: "Soleado",
@@ -299,15 +309,20 @@ const translations = {
     humidity: "{value}%",
     wind: "{value}",
     gust: "Ràfega",
-    precipitation: "{value} mm",
+    precipitation: "{value}",
     precipitation_probability: "{value}%",
     pressure: "{value} hPa",
     uv_index: "{value}",
+    solar_global_irradiance: "{value} W/m²",
+    below_horizon: "Sota horitzó",
+    above_horizon: "Sobre horitzó",
+    azimuth: "{value}°",
     sunrise: "{value}",
     sunset: "{value}",
     lightning_town: "{value}",
     lightning_region: "{value}",
     moon_phase: "{value}",
+    illuminated_percentage: "{value}%",
     moonrise: "{value}",
     moonset: "{value}",
     daily_forecast: "Previsió diària",
@@ -338,7 +353,7 @@ const translations = {
     umbral: "Llindar",
     peligro: "Perill",
     nivel: "Nivell",
-    attribution: "Powered by Meteocatpy",
+    attribution: "Powered by Meteocatpy & Solarmoonpy",
     sun: "Dg",
     mon: "Dl",
     tue: "Dt",
@@ -348,13 +363,13 @@ const translations = {
     sat: "Ds",
     unknown: "Desconegut",
     new_moon: "Lluna nova",
-    waxing_crescent: "Creixent il·luminant",
+    waxing_crescent: "Lluna creixent",
     first_quarter: "Quart creixent",
     waxing_gibbous: "Gibosa creixent",
     full_moon: "Lluna plena",
     waning_gibbous: "Gibosa minvant",
     last_quarter: "Quart minvant",
-    waning_crescent: "Minvant il·luminant",
+    waning_crescent: "Lluna minvant",
     clear: "Clar",
     clear_night: "Nit serena",
     sunny: "Assolellat",
@@ -510,8 +525,10 @@ class MeteocatCard extends HTMLElement {
       iconPath: "/hacsfiles/meteocat-card/",
       debug: false,
       fade_duration: 0.3, // Duración por defecto del fade
-      option_show_sun: true,
-      option_show_moon: true,
+      option_show_sun_info: true,
+      option_show_sun_times: true,
+      option_show_moon_info: true,
+      option_show_moon_times: true,
     };
   }
 
@@ -519,12 +536,15 @@ class MeteocatCard extends HTMLElement {
     if (!config?.entity) throw new Error(getTranslation(this._hass, 'entity_not_found', { entity: config?.entity || 'unknown' }));
     this._config = {
       type: "meteocat-card",
+      default_forecast_view: "daily",
       option_static_icons: false,
       iconPath: "/hacsfiles/meteocat-card/",
       debug: false,
       fade_duration: 0.3, // Duración por defecto del fade
-      option_show_sun: true,
-      option_show_moon: true,
+      option_show_sun_info: true,
+      option_show_sun_times: true,
+      option_show_moon_info: true,
+      option_show_moon_times: true,
       ...config,
       title: undefined,
       sunrise_entity: undefined,
@@ -534,6 +554,7 @@ class MeteocatCard extends HTMLElement {
     delete this._config.icons;
     delete this._config.sunrise_entity;
     delete this._config.sunset_entity;
+    this._currentForecast = this._config.default_forecast_view === "hourly" ? "hourly" : "daily";
     this.iconPath = this._config.iconPath || "/hacsfiles/meteocat-card/";
     this._fadeDuration = parseFloat(this._config.fade_duration) || 0.3; // Configuración de duración del fade
     this._debug = !!this._config.debug;
@@ -572,21 +593,33 @@ class MeteocatCard extends HTMLElement {
         return ent ? ent.entity_id : null;
       };
 
-      this._config.feels_like_entity = findByKey("feels_like") || this._config.feels_like_entity;
-      this._config.forecast_max_entity = findByKey("max_temperature_forecast") || this._config.forecast_max_entity;
-      this._config.forecast_min_entity = findByKey("min_temperature_forecast") || this._config.forecast_min_entity;
-      this._config.precipitation_entity = findByKey("precipitation_accumulated") || this._config.precipitation_entity;
-      this._config.precipitation_probability_entity = findByKey("precipitation_probability") || this._config.precipitation_probability_entity;
-      this._config.town_name_entity = findByKey("town_name") || this._config.town_name_entity;
-      this._config.alerts_entity = findByKey("alerts") || this._config.alerts_entity;
-      this._config.sunrise_entity = findByKey("sunrise") || "sensor.sun_next_rising";
-      this._config.sunset_entity = findByKey("sunset") || "sensor.sun_next_setting";
-      this._config.lightning_town_entity = findByKey("lightning_town") || this._config.lightning_town_entity;
-      this._config.lightning_region_entity = findByKey("lightning_region") || this._config.lightning_region_entity;
-      this._config.moon_phase_entity = findByKey("moon_phase") || this._config.moon_phase_entity;
-      this._config.moonrise_entity = findByKey("moonrise") || this._config.moonrise_entity;
-      this._config.moonset_entity = findByKey("moonset") || this._config.moonset_entity;
-      this._config.station_timestamp_entity = findByKey("station_timestamp") || this._config.station_timestamp_entity;
+      this._config.feels_like_entity = this._config.feels_like_entity || findByKey("feels_like");
+      this._config.forecast_max_entity = this._config.forecast_max_entity || findByKey("max_temperature_forecast");
+      this._config.forecast_min_entity = this._config.forecast_min_entity || findByKey("min_temperature_forecast");
+      this._config.precipitation_entity = this._config.precipitation_entity || findByKey("precipitation_accumulated");
+      this._config.precipitation_probability_entity = this._config.precipitation_probability_entity || findByKey("precipitation_probability");
+      this._config.precipitation_intensity_entity = this._config.precipitation_intensity_entity || findByKey("precipitation_intensity");
+      this._config.town_name_entity = this._config.town_name_entity || findByKey("town_name");
+      this._config.alerts_entity = this._config.alerts_entity || findByKey("alerts");
+      this._config.sunrise_entity = this._config.sunrise_entity || findByKey("sunrise") || "sensor.sun_next_rising";
+      this._config.sunset_entity = this._config.sunset_entity || findByKey("sunset") || "sensor.sun_next_setting";
+      this._config.lightning_town_entity = this._config.lightning_town_entity || findByKey("lightning_town");
+      this._config.lightning_region_entity = this._config.lightning_region_entity || findByKey("lightning_region");
+      this._config.moon_phase_entity = this._config.moon_phase_entity || findByKey("moon_phase");
+      this._config.moonrise_entity = this._config.moonrise_entity || findByKey("moonrise");
+      this._config.moonset_entity = this._config.moonset_entity || findByKey("moonset");
+      this._config.station_timestamp_entity = this._config.station_timestamp_entity || findByKey("station_timestamp");
+      this._config.humidity_entity = this._config.humidity_entity || findByKey("humidity");
+      this._config.solar_global_irradiance_entity = this._config.solar_global_irradiance_entity || findByKey("solar_global_irradiance");
+      this._config.sun_entity = this._config.sun_entity || findByKey("sun");
+
+      // Nuevas entidades agregadas para overrides
+      this._config.pressure_entity = this._config.pressure_entity || findByKey("pressure");
+      this._config.uv_index_entity = this._config.uv_index_entity || findByKey("uv_index");
+      this._config.temperature_entity = this._config.temperature_entity || findByKey("temperature");
+      this._config.wind_bearing_entity = this._config.wind_bearing_entity || findByKey("wind_bearing");
+      this._config.wind_gust_speed_entity = this._config.wind_gust_speed_entity || findByKey("wind_gust_speed");
+      this._config.wind_speed_entity = this._config.wind_speed_entity || findByKey("wind_speed");
 
       const alertKeys = [
         "alert_wind",
@@ -600,7 +633,7 @@ class MeteocatCard extends HTMLElement {
       ];
 
       for (const key of alertKeys) {
-        this._config[`${key}_entity`] = findByKey(key) || this._config[`${key}_entity`];
+        this._config[`${key}_entity`] = this._config[`${key}_entity`] || findByKey(key);
       }
 
       this._entitiesDiscovered = true;
@@ -610,6 +643,7 @@ class MeteocatCard extends HTMLElement {
         forecast_min: this._config.forecast_min_entity,
         precipitation: this._config.precipitation_entity,
         precipitation_probability: this._config.precipitation_probability_entity,
+        precipitation_intensity: this._config.precipitation_intensity_entity,
         town_name: this._config.town_name_entity,
         alerts: this._config.alerts_entity,
         sunrise: this._config.sunrise_entity,
@@ -620,6 +654,15 @@ class MeteocatCard extends HTMLElement {
         moonrise: this._config.moonrise_entity,
         moonset: this._config.moonset_entity,
         station_timestamp: this._config.station_timestamp_entity,
+        humidity: this._config.humidity_entity,
+        solar_global_irradiance: this._config.solar_global_irradiance_entity,
+        sun: this._config.sun_entity,
+        pressure: this._config.pressure_entity,
+        uv_index: this._config.uv_index_entity,
+        temperature: this._config.temperature_entity,
+        wind_bearing: this._config.wind_bearing_entity,
+        wind_gust_speed: this._config.wind_gust_speed_entity,
+        wind_speed: this._config.wind_speed_entity,
         ...alertKeys.reduce((acc, key) => ({ ...acc, [key]: this._config[`${key}_entity`] }), {})
       });
 
@@ -958,6 +1001,24 @@ class MeteocatCard extends HTMLElement {
     return icon_map[phase] || "mdi:moon";
   }
 
+  _formatNumber(value, decimals = 1) {
+    if (value === "-" || value === null || value === undefined || isNaN(value)) {
+      return "-";
+    }
+    const lang = this._hass?.language || "es";
+    const localeMap = {
+      en: "en-US",
+      "en-GB": "en-GB",
+      es: "es-ES",
+      ca: "ca-ES"
+    };
+    const locale = localeMap[lang] || "es-ES";
+    return Number(value).toLocaleString(locale, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  }
+
   async _update() {
     if (this._updateTimeout) {
       clearTimeout(this._updateTimeout);
@@ -971,6 +1032,7 @@ class MeteocatCard extends HTMLElement {
       const forecastMin = this._config.forecast_min_entity ? this._hass.states[this._config.forecast_min_entity] : null;
       const precipitation = this._config.precipitation_entity ? this._hass.states[this._config.precipitation_entity] : null;
       const precipitationProbability = this._config.precipitation_probability_entity ? this._hass.states[this._config.precipitation_probability_entity] : null;
+      const precipitationIntensity = this._config.precipitation_intensity_entity ? this._hass.states[this._config.precipitation_intensity_entity] : null;
       const sunrise = this._hass.states[this._config.sunrise_entity];
       const sunset = this._hass.states[this._config.sunset_entity];
       const lightningTown = this._config.lightning_town_entity ? this._hass.states[this._config.lightning_town_entity] : null;
@@ -981,6 +1043,19 @@ class MeteocatCard extends HTMLElement {
       const alertsEntity = this._config.alerts_entity ? this._hass.states[this._config.alerts_entity] : null;
       const townName = this._config.town_name_entity ? this._hass.states[this._config.town_name_entity]?.state ?? "-" : "-";
       const stationTimestamp = this._config.station_timestamp_entity ? this._hass.states[this._config.station_timestamp_entity] : null;
+
+      // Nuevas entidades para overrides
+      const pressure = this._config.pressure_entity ? this._hass.states[this._config.pressure_entity]?.state ?? "-" : entity.attributes?.pressure ?? "-";
+      const uvIndex = this._config.uv_index_entity ? this._hass.states[this._config.uv_index_entity]?.state ?? "-" : entity.attributes?.uv_index ?? "-";
+      const temperature = this._config.temperature_entity ? this._hass.states[this._config.temperature_entity]?.state ?? "-" : entity.attributes?.temperature ?? "-";
+      const windBearing = this._config.wind_bearing_entity ? this._hass.states[this._config.wind_bearing_entity]?.state ?? "-" : entity.attributes?.wind_bearing ?? "-";
+      const windGustSpeed = this._config.wind_gust_speed_entity ? this._hass.states[this._config.wind_gust_speed_entity]?.state ?? "-" : entity.attributes?.wind_gust_speed ?? "-";
+      const windSpeed = this._config.wind_speed_entity ? this._hass.states[this._config.wind_speed_entity]?.state ?? "-" : entity.attributes?.wind_speed ?? "-";
+      const humidity = this._config.humidity_entity ? this._hass.states[this._config.humidity_entity]?.state ?? "-" : entity.attributes?.humidity ?? "-";
+      const solarGlobalIrradiance = this._config.solar_global_irradiance_entity ? this._hass.states[this._config.solar_global_irradiance_entity]?.state ?? "-" : entity.attributes?.solar_global_irradiance ?? "-";
+      const sun = this._config.sun_entity ? this._hass.states[this._config.sun_entity] : null;
+      const sunState = sun?.state ? getTranslation(this._hass, sun.state, {}, sun.state) : "-";
+      const sunAzimuth = sun?.attributes?.azimuth ?? "-";
 
       if (!entity) {
         this._content.innerHTML = `<ha-card>
@@ -998,15 +1073,12 @@ class MeteocatCard extends HTMLElement {
       const friendlyName = entity.attributes?.friendly_name || this._config.entity;
       this._log("friendly_name =", friendlyName);
 
-      const windBearing = entity.attributes?.wind_bearing;
       const cardinalDirection = this._convertDegreesToCardinal(windBearing);
-      const windSpeed = entity.attributes?.wind_speed ?? "-";
-      const windGustSpeed = entity.attributes?.wind_gust_speed ?? "-";
       const windSpeedUnit = entity.attributes?.wind_speed_unit ?? "km/h";
       const windDisplay = windSpeed !== "-" && windGustSpeed !== "-"
-        ? getTranslation(this._hass, 'wind', { value: `${cardinalDirection} ${windSpeed} ${windSpeedUnit} (${getTranslation(this._hass, 'gust')} ${windGustSpeed} ${windSpeedUnit})` })
+        ? getTranslation(this._hass, 'wind', { value: `${cardinalDirection} ${this._formatNumber(windSpeed)} ${windSpeedUnit} (${getTranslation(this._hass, 'gust')} ${this._formatNumber(windGustSpeed)} ${windSpeedUnit})` })
         : windSpeed !== "-"
-          ? getTranslation(this._hass, 'wind', { value: `${cardinalDirection} ${windSpeed} ${windSpeedUnit}` })
+          ? getTranslation(this._hass, 'wind', { value: `${cardinalDirection} ${this._formatNumber(windSpeed)} ${windSpeedUnit}` })
           : getTranslation(this._hass, 'wind', { value: `${cardinalDirection} -` });
 
       this._dailyForecasts = await this._fetchForecasts("daily");
@@ -1041,8 +1113,8 @@ class MeteocatCard extends HTMLElement {
                       <div class="forecast-item">
                         <div class="forecast-day">${forecastDay}</div>
                         <img src="${forecastIcon}" alt="${condition}" class="forecast-icon">
-                        <div class="forecast-temp">${maxTemp}°C / ${minTemp}°C</div>
-                        <div class="forecast-precip"><ha-icon icon="mdi:weather-rainy"></ha-icon>${pop}%</div>
+                        <div class="forecast-temp">${this._formatNumber(maxTemp)}°C / ${this._formatNumber(minTemp)}°C</div>
+                        <div class="forecast-precip"><ha-icon icon="mdi:weather-rainy"></ha-icon>${this._formatNumber(pop, 0)}%</div>
                       </div>
                     `;
                   }).join("")}
@@ -1075,10 +1147,10 @@ class MeteocatCard extends HTMLElement {
                       <div class="forecast-item">
                         <div class="forecast-hour">${forecastHour}</div>
                         <img src="${forecastIcon}" alt="${condition}" class="forecast-icon">
-                        <div class="forecast-temp">${temp}°C</div>
-                        <div class="forecast-humidity"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: humidity })}</div>
-                        <div class="forecast-precip"><ha-icon icon="mdi:weather-rainy"></ha-icon>${pos} mm</div>
-                        <div class="forecast-wind"><ha-icon icon="mdi:weather-windy"></ha-icon>${windSpeed} km/h</div>
+                        <div class="forecast-temp">${this._formatNumber(temp)}°C</div>
+                        <div class="forecast-humidity"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: this._formatNumber(humidity, 0) })}</div>
+                        <div class="forecast-precip"><ha-icon icon="mdi:weather-rainy"></ha-icon>${this._formatNumber(pos)} mm</div>
+                        <div class="forecast-wind"><ha-icon icon="mdi:weather-windy"></ha-icon>${this._formatNumber(windSpeed)} km/h</div>
                       </div>
                     `;
                   }).join("")}
@@ -1172,32 +1244,86 @@ class MeteocatCard extends HTMLElement {
       const formattedTimestamp = this._formatStationTimestamp(stationTimestamp?.state);
       const translatedMoonPhase = getTranslation(this._hass, moonPhase?.state || 'unknown');
 
+      const sunriseTs = sunrise?.state ? new Date(sunrise.state).getTime() : null;
+      const sunsetTs = sunset?.state ? new Date(sunset.state).getTime() : null;
+
+      let sunFirst = '';
+      let sunSecond = '';
+      if (sunriseTs !== null && sunsetTs !== null) {
+        if (sunriseTs < sunsetTs) {
+          sunFirst = `<div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>`;
+          sunSecond = `<div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>`;
+        } else {
+          sunFirst = `<div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>`;
+          sunSecond = `<div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>`;
+        }
+      } else {
+        sunFirst = `<div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>`;
+        sunSecond = `<div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>`;
+      }
+
+      const moonriseTs = moonrise?.state ? new Date(moonrise.state).getTime() : null;
+      const moonsetTs = moonset?.state ? new Date(moonset.state).getTime() : null;
+
+      let moonFirst = '';
+      let moonSecond = '';
+      if (moonriseTs !== null && moonsetTs !== null) {
+        if (moonriseTs < moonsetTs) {
+          moonFirst = `<div class="detail"><ha-icon icon="mdi:weather-moonset-up"></ha-icon>${getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) })}</div>`;
+          moonSecond = `<div class="detail"><ha-icon icon="mdi:weather-moonset-down"></ha-icon>${getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) })}</div>`;
+        } else {
+          moonFirst = `<div class="detail"><ha-icon icon="mdi:weather-moonset-down"></ha-icon>${getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) })}</div>`;
+          moonSecond = `<div class="detail"><ha-icon icon="mdi:weather-moonset-up"></ha-icon>${getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) })}</div>`;
+        }
+      } else {
+        moonFirst = `<div class="detail"><ha-icon icon="mdi:weather-moonset-down"></ha-icon>${getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) })}</div>`;
+        moonSecond = `<div class="detail"><ha-icon icon="mdi:weather-moonset-up"></ha-icon>${getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) })}</div>`;
+      }
+
+      const precipitationValue = precipitation?.state ?? entity.attributes?.precipitation ?? "-";
+      const precipitationIntensityValue =
+        precipitationIntensity && precipitationIntensity.state
+          ? ` (${this._formatNumber(precipitationIntensity.state)} mm/h)`
+          : "";
+      const precipitationDisplay =
+        precipitationValue !== "-"
+          ? `${this._formatNumber(precipitationValue)} mm${precipitationIntensityValue}`
+          : "-";
+
       let detailsHtml = `
         <div class="details">
-          <div class="detail"><ha-icon icon="mdi:thermometer-high"></ha-icon>${getTranslation(this._hass, 'max_temp', { value: forecastMax?.state ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:thermometer-low"></ha-icon>${getTranslation(this._hass, 'min_temp', { value: forecastMin?.state ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: entity.attributes?.humidity ?? "-" })}</div>
+          <div class="detail"><ha-icon icon="mdi:thermometer-high"></ha-icon>${getTranslation(this._hass, 'max_temp', { value: this._formatNumber(forecastMax?.state ?? "-") })}</div>
+          <div class="detail"><ha-icon icon="mdi:thermometer-low"></ha-icon>${getTranslation(this._hass, 'min_temp', { value: this._formatNumber(forecastMin?.state ?? "-") })}</div>
+          <div class="detail"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: this._formatNumber(humidity, 0) })}</div>
           <div class="detail"><ha-icon icon="mdi:weather-windy"></ha-icon>${windDisplay}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-rainy"></ha-icon>${getTranslation(this._hass, 'precipitation', { value: precipitation?.state ?? entity.attributes?.precipitation ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-pouring"></ha-icon>${getTranslation(this._hass, 'precipitation_probability', { value: precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-" })}</div>
-          <div class="detail"><ha-icon icon="mdi:gauge"></ha-icon>${getTranslation(this._hass, 'pressure', { value: entity.attributes?.pressure ?? "-" })}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-pouring"></ha-icon>${getTranslation(this._hass, 'precipitation_probability', { value: this._formatNumber(precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-", 0) })}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-rainy"></ha-icon>${getTranslation(this._hass, 'precipitation', { value: precipitationDisplay })}</div>
+          <div class="detail"><ha-icon icon="mdi:gauge"></ha-icon>${getTranslation(this._hass, 'pressure', { value: this._formatNumber(pressure, 0) })}</div>
           <div class="detail"><ha-icon icon="mdi:flash"></ha-icon>${lightningTown?.state ?? "-"} / ${lightningRegion?.state ?? "-"}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: `UV ${entity.attributes?.uv_index ?? "-"}` })}</div>
-          <div class="detail"><ha-icon icon="${this._getMoonIcon(moonPhase?.state)}"></ha-icon>${getTranslation(this._hass, 'moon_phase', { value: translatedMoonPhase })}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: `UV ${this._formatNumber(uvIndex)}` })}</div>
+          <div class="detail"><ha-icon icon="mdi:sun-wireless-outline"></ha-icon>${getTranslation(this._hass, 'solar_global_irradiance', { value: this._formatNumber(solarGlobalIrradiance, 0) })}</div>
       `;
 
-      if (this._config.option_show_sun) {
+      if (this._config.option_show_sun_info) {
         detailsHtml += `
-          <div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-sunny"></ha-icon>${sunState}</div>
+          <div class="detail"><ha-icon icon="mdi:sun-angle-outline"></ha-icon>${getTranslation(this._hass, 'azimuth', { value: this._formatNumber(sunAzimuth, 0) })}</div>
         `;
       }
 
-      if (this._config.option_show_moon) {
+      if (this._config.option_show_moon_info) {
         detailsHtml += `
-          <div class="detail"><ha-icon icon="mdi:weather-moonset-down"></ha-icon>${getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-moonset-up"></ha-icon>${getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) })}</div>
+          <div class="detail"><ha-icon icon="${this._getMoonIcon(moonPhase?.state)}"></ha-icon>${getTranslation(this._hass, 'moon_phase', { value: translatedMoonPhase })}</div>
+          <div class="detail"><ha-icon icon="mdi:weather-night"></ha-icon>${getTranslation(this._hass, 'illuminated_percentage', { value: this._formatNumber(moonPhase?.attributes?.illuminated_percentage ?? "-", 0) })}</div>
         `;
+      }
+
+      if (this._config.option_show_sun_times) {
+        detailsHtml += sunFirst + sunSecond;
+      }
+
+      if (this._config.option_show_moon_times) {
+        detailsHtml += moonFirst + moonSecond;
       }
 
       detailsHtml += `</div>`;
@@ -1260,8 +1386,8 @@ class MeteocatCard extends HTMLElement {
               <div class="current-condition">${condition}</div>
             </div>
             <div class="current-right">
-              <div class="current-temp">${entity.attributes?.temperature ?? "-"}°C</div>
-              <div class="current-feels">${getTranslation(this._hass, 'feels_like', { value: feelsLike?.state ?? "-" })}</div>
+              <div class="current-temp">${this._formatNumber(temperature)}°C</div>
+              <div class="current-feels">${getTranslation(this._hass, 'feels_like', { value: this._formatNumber(feelsLike?.state ?? "-") })}</div>
             </div>
           </div>
 
@@ -1271,7 +1397,7 @@ class MeteocatCard extends HTMLElement {
 
           ${alertsHtml}
 
-          <div class="attribution">Powered by Meteocatpy</div>
+          <div class="attribution">Powered by Meteocatpy & Solarmoonpy</div>
         </ha-card>
       `;
 

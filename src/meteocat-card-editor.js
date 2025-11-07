@@ -6,13 +6,20 @@ const translations = {
     card_description: "Custom card to display Meteocat integration weather data.",
     editor_not_available: "Visual editor not available. Please use the YAML editor.",
     entity: "Forecast",
+    daily: "Daily",
+    hourly: "Hourly",
+    default_forecast_view: "Default forecast view",
     option_static_icons: "Static icons",
     icon_path_type: "Icons path",
     icon_path_type_hacs: "HACS installation",
     icon_path_type_manual: "Manual installation",
     debug: "Enable debug logging",
-    option_show_sun: "Sun sensors (sunrise/sunset)",
-    option_show_moon: "Moon sensors (moonrise/moonset)",
+    option_show_sun_times: "Sunrise / Sunset",
+    option_show_moon_times: "Moonrise / Moonset",
+    option_show_sun_info: "State / Azimuth",
+    option_show_moon_info: "Phase / Illumination",
+    sun_options: "Sun options",
+    moon_options: "Moon options",
   },
   es: {
     title_default: "Meteocat",
@@ -20,13 +27,20 @@ const translations = {
     card_description: "Tarjeta personalizada para mostrar datos del tiempo de la integración Meteocat.",
     editor_not_available: "Editor visual no disponible. Por favor, usa el editor YAML.",
     entity: "Previsión",
+    daily: "Diario",
+    hourly: "Horario",
+    default_forecast_view: "Vista de previsión por defecto",
     option_static_icons: "Iconos estáticos",
     icon_path_type: "Ruta de iconos",
     icon_path_type_hacs: "Instalación HACS",
     icon_path_type_manual: "Instalación manual",
     debug: "Habilitar registro de depuración",
-    option_show_sun: "Sensores de sol (amanecer/atardecer)",
-    option_show_moon: "Sensores de luna (salida/puesta)",
+    option_show_sun_times: "Amanecer / Atardecer",
+    option_show_moon_times: "Salida / Puesta",
+    option_show_sun_info: "Estado / Acimut",
+    option_show_moon_info: "Fase / Iluminación",
+    sun_options: "Opciones sol",
+    moon_options: "Opciones luna",
   },
   ca: {
     title_default: "Meteocat",
@@ -34,135 +48,150 @@ const translations = {
     card_description: "Targeta personalitzada per mostrar dades del temps de la integració Meteocat.",
     editor_not_available: "Editor visual no disponible. Si us plau, usa l'editor YAML.",
     entity: "Previsió",
+    daily: "Diari",
+    hourly: "Horari",
+    default_forecast_view: "Vista de previsió per defecte",
     option_static_icons: "Icones estàtiques",
     icon_path_type: "Ruta d'icones",
     icon_path_type_hacs: "Instal·lació HACS",
     icon_path_type_manual: "Instal·lació manual",
     debug: "Habilitar registre de depuració",
-    option_show_sun: "Sensors de sol (sortida/posta de sol)",
-    option_show_moon: "Sensors de lluna (sortida/posta)",
+    option_show_sun_times: "Sortida / Posta de sol",
+    option_show_moon_times: "Sortida / Posta",
+    option_show_sun_info: "Estat / Azimut",
+    option_show_moon_info: "Fase / Il·luminació",
+    sun_options: "Opcions sol",
+    moon_options: "Opcions lluna",
   },
 };
 
-// Helper para obtener traducciones
+// Helper de traducciones
 function getTranslation(hass, key, params = {}, fallback = key) {
-  const lang = hass?.language || "en";
+  const lang = hass?.locale?.language || hass?.language || "en";
   let text = translations[lang]?.[key] || translations.en[key] || fallback;
-  Object.entries(params).forEach(([param, value]) => {
+  for (const [param, value] of Object.entries(params)) {
     text = text.replace(`{${param}}`, value);
-  });
+  }
   return text;
 }
 
+// ==============================
+// 🔹 Clase principal
+// ==============================
 class MeteocatCardEditor extends HTMLElement {
   constructor() {
     super();
     this._config = {};
     this._hass = null;
-    this.attachShadow({ mode: "open" });
     this._form = null;
-    console.log("MeteocatCardEditor: Constructor called");
+    this.attachShadow({ mode: "open" });
   }
 
+  // ------------------------------
+  // 🔹 Configuración inicial
+  // ------------------------------
   setConfig(config) {
     this._config = {
       type: "custom:meteocat-card",
       entity: "weather.home",
+      default_forecast_view: "daily",
       option_static_icons: false,
       icon_path_type: "hacs",
-      option_show_sun: true,
-      option_show_moon: true,
+      option_show_sun_info: true,
+      option_show_sun_times: true,
+      option_show_moon_info: true,
+      option_show_moon_times: true,
       debug: false,
       ...config,
-      title: undefined,
     };
-    this._config.iconPath = this._config.icon_path_type === "hacs" ? "/hacsfiles/meteocat-card/" : "/local/meteocat-card/icons/";
+
+    this._config.iconPath =
+      this._config.icon_path_type === "hacs"
+        ? "/hacsfiles/meteocat-card/"
+        : "/local/meteocat-card/icons/";
+
+    // Limpieza de claves no necesarias
     delete this._config.title;
     delete this._config.icons;
     delete this._config.sunrise_entity;
     delete this._config.sunset_entity;
-    console.log("MeteocatCardEditor: setConfig called with config =", this._config);
+
     this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
-    if (this._form) this._form.hass = hass;
-
-    if (this._hass && this._config.entity && this._hass.states[this._config.entity]) {
-      const friendlyName =
-        this._hass.states[this._config.entity]?.attributes?.friendly_name ||
-        this._config.entity;
-      console.log("MeteocatCardEditor: friendly_name =", friendlyName);
+    if (this._form) {
+      this._form.generalForm.hass = hass;
+      this._form.sunForm.hass = hass;
+      this._form.moonForm.hass = hass;
+    } else if (this.isConnected) {
+      this._render();
     }
-
-    this._render();
   }
 
   connectedCallback() {
-    console.log("MeteocatCardEditor: connectedCallback called");
-    this._render();
+    if (!this.shadowRoot.innerHTML) this._render();
   }
 
-  _schema() {
-    return [
-      {
-        name: "entity",
-        selector: {
-          entity: {
-            filter: [
-              { domain: "weather", integration: "meteocat" },
-            ],
-          },
-        },
-      },
-      {
-        name: "icon_path_type",
-        selector: {
-          select: {
-            options: [
-              { value: "hacs", label: getTranslation(this._hass, "icon_path_type_hacs") },
-              { value: "manual", label: getTranslation(this._hass, "icon_path_type_manual") },
-            ],
-          },
-        },
-      },
-      {
-        name: "option_static_icons",
-        selector: { boolean: {} },
-      },
-      {
-        name: "option_show_sun",
-        selector: { boolean: {} },
-      },
-      {
-        name: "option_show_moon",
-        selector: { boolean: {} },
-      },
-    ];
-  }
-
+  // ------------------------------
+  // 🔹 Renderizado del formulario
+  // ------------------------------
   _render() {
-    if (!this.shadowRoot) {
-      console.error("MeteocatCardEditor: Shadow root not available");
-      return;
-    }
+    if (!this.shadowRoot) return;
     this.shadowRoot.innerHTML = "";
 
     const wrapper = document.createElement("div");
     const style = document.createElement("style");
     style.textContent = `
-      .row { margin-bottom: 10px; display:block; }
-      label { font-weight: 600; display:block; margin-bottom:6px; color:var(--primary-text-color); }
-      input[type="text"]{ width:100%; padding:6px 8px; box-sizing:border-box; border-radius:4px; border:1px solid rgba(0,0,0,0.12); background:var(--card-background-color); color:var(--primary-text-color); }
-      .checkbox { display:flex; align-items:center; gap:8px; margin-top:8px; }
-      .error { color: var(--error-color); padding: 16px; }
-      ha-alert { margin-bottom: 16px; }
+      :host {
+        --mc-general-label-font-size: 1rem;
+        --mc-label-font-size: 0.875rem;
+        --mc-form-vertical-spacing: 8px;
+      }
+
+      .section-label {
+        font-size: var(--mc-general-label-font-size);
+        font-weight: normal;
+        margin: 18px 0 8px;
+        padding-top: 10px;
+        border-top: 2px solid var(--divider-color, rgba(0,0,0,0.06));
+        color: var(--primary-text-color);
+      }
+
+      .group { margin-bottom: 6px; }
+      .indented-form { margin-left: 16px; }
+      .indented-form ha-formfield:not(:last-child) {
+        margin-bottom: var(--mc-form-vertical-spacing);
+      }
+
+      :not(.indented-form) ha-form ha-formfield label.mdc-label {
+        font-size: var(--mc-general-label-font-size);
+      }
+
+      .indented-form ha-form ha-formfield label.mdc-label {
+        font-size: var(--mc-label-font-size);
+        line-height: normal;
+      }
+
+      ha-select option,
+      ha-select .mdc-select__selected-text {
+        font-size: var(--mc-label-font-size);
+      }
+
+      ha-formfield { align-items: center; }
+
+      .error {
+        color: var(--error-color);
+        padding: 16px;
+      }
+
+      ha-form { display: block; }
     `;
     wrapper.appendChild(style);
 
+    // Si no existe ha-form → error amigable
     if (!customElements.get("ha-form")) {
-      console.error("MeteocatCardEditor: ha-form custom element not found");
       const errorDiv = document.createElement("div");
       errorDiv.className = "error";
       errorDiv.textContent = getTranslation(this._hass, "editor_not_available");
@@ -172,70 +201,133 @@ class MeteocatCardEditor extends HTMLElement {
     }
 
     try {
-      const form = document.createElement("ha-form");
-      form.hass = this._hass;
-      form.data = {
-        entity: this._config.entity,
-        option_static_icons: this._config.option_static_icons,
-        icon_path_type: this._config.icon_path_type || "hacs",
-        option_show_sun: this._config.option_show_sun,
-        option_show_moon: this._config.option_show_moon,
-        debug: this._config.debug,
-      };
-      form.schema = this._schema();
-
-      form.computeLabel = (schema) => {
-        return getTranslation(this._hass, schema.name);
+      // === Formularios ===
+      const makeForm = (data, schema, cls = "") => {
+        const f = document.createElement("ha-form");
+        f.hass = this._hass;
+        f.data = data;
+        f.schema = schema;
+        if (cls) f.classList.add(cls);
+        f.computeLabel = (s) => getTranslation(this._hass, s.name || s.label);
+        f.computeHelper = () => "";
+        return f;
       };
 
-      form.addEventListener("value-changed", (ev) => {
-        // Crear un nuevo objeto de configuración con el orden deseado
-        const updatedConfig = {
-          type: "custom:meteocat-card",
-          entity: ev.detail.value.entity,
-          option_static_icons: ev.detail.value.option_static_icons,
-          icon_path_type: ev.detail.value.icon_path_type,
-          iconPath: ev.detail.value.icon_path_type === "hacs" ? "/hacsfiles/meteocat-card/" : "/local/meteocat-card/icons/",
-          fade_duration: this._config.fade_duration,
-          option_show_sun: ev.detail.value.option_show_sun,
-          option_show_moon: ev.detail.value.option_show_moon,
-          debug: ev.detail.value.debug,
-        };
-        // Mantener cualquier otra propiedad existente que no esté en el formulario
-        Object.keys(this._config).forEach((key) => {
-          if (!["type", "entity", "option_static_icons", "icon_path_type", "iconPath", "fade_duration", "option_show_sun", "option_show_moon", "debug"].includes(key)) {
-            updatedConfig[key] = this._config[key];
-          }
-        });
-        console.log("MeteocatCardEditor: Config changed =", updatedConfig);
-        this.dispatchEvent(
-          new CustomEvent("config-changed", {
-            detail: { config: updatedConfig },
-            bubbles: true,
-            composed: true,
-          })
-        );
-        this._config = updatedConfig;
-      });
+      // General
+      const generalForm = makeForm(
+        {
+          entity: this._config.entity,
+          default_forecast_view: this._config.default_forecast_view || "daily",
+          icon_path_type: this._config.icon_path_type,
+          option_static_icons: this._config.option_static_icons,
+        },
+        [
+          { name: "entity", selector: { entity: { filter: [{ domain: "weather", integration: "meteocat" }] } } },
+          {
+            name: "default_forecast_view",
+            selector: {
+              select: {
+                options: [
+                  { value: "daily", label: getTranslation(this._hass, "daily") },
+                  { value: "hourly", label: getTranslation(this._hass, "hourly") },
+                ],
+              },
+            },
+          },
+          {
+            name: "icon_path_type",
+            selector: {
+              select: {
+                options: [
+                  { value: "hacs", label: getTranslation(this._hass, "icon_path_type_hacs") },
+                  { value: "manual", label: getTranslation(this._hass, "icon_path_type_manual") },
+                ],
+              },
+            },
+          },
+          { name: "option_static_icons", selector: { boolean: {} } },
+        ]
+      );
 
-      wrapper.appendChild(form);
-      this._form = form;
-      console.log("MeteocatCardEditor: ha-form created successfully");
-    } catch (error) {
-      console.error("MeteocatCardEditor: Error creating ha-form:", error);
+      // Sol
+      const sunForm = makeForm(
+        {
+          option_show_sun_info: this._config.option_show_sun_info,
+          option_show_sun_times: this._config.option_show_sun_times,
+        },
+        [
+          { name: "option_show_sun_info", selector: { boolean: {} } },
+          { name: "option_show_sun_times", selector: { boolean: {} } },
+        ],
+        "indented-form"
+      );
+
+      // Luna
+      const moonForm = makeForm(
+        {
+          option_show_moon_info: this._config.option_show_moon_info,
+          option_show_moon_times: this._config.option_show_moon_times,
+        },
+        [
+          { name: "option_show_moon_info", selector: { boolean: {} } },
+          { name: "option_show_moon_times", selector: { boolean: {} } },
+        ],
+        "indented-form"
+      );
+
+      // === Manejador común de eventos ===
+      const handleChange = (ev) => {
+        const v = ev.detail.value || {};
+        const updated = { ...this._config, ...v };
+        updated.type = "custom:meteocat-card";
+        if (v.icon_path_type !== undefined) {
+          updated.iconPath =
+            v.icon_path_type === "hacs"
+              ? "/hacsfiles/meteocat-card/"
+              : "/local/meteocat-card/icons/";
+        }
+        this._config = updated;
+        this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: updated }, bubbles: true, composed: true }));
+      };
+
+      [generalForm, sunForm, moonForm].forEach((f) =>
+        f.addEventListener("value-changed", handleChange)
+      );
+
+      // === Montaje del DOM ===
+      const makeSection = (labelKey, form) => {
+        const group = document.createElement("div");
+        group.className = "group";
+        if (labelKey) {
+          const label = document.createElement("div");
+          label.className = "section-label";
+          label.textContent = getTranslation(this._hass, labelKey);
+          group.appendChild(label);
+        }
+        group.appendChild(form);
+        return group;
+      };
+
+      wrapper.append(
+        makeSection(null, generalForm),
+        makeSection("sun_options", sunForm),
+        makeSection("moon_options", moonForm)
+      );
+
+      this.shadowRoot.appendChild(wrapper);
+      this._form = { generalForm, sunForm, moonForm };
+    } catch (err) {
+      console.error("MeteocatCardEditor render error:", err);
       const errorDiv = document.createElement("div");
       errorDiv.className = "error";
       errorDiv.textContent = getTranslation(this._hass, "editor_not_available");
       wrapper.appendChild(errorDiv);
+      this.shadowRoot.appendChild(wrapper);
     }
-
-    this.shadowRoot.appendChild(wrapper);
   }
 }
 
+// Registrar custom element
 if (!customElements.get("meteocat-card-editor")) {
-  console.log("MeteocatCardEditor: Registering custom element meteocat-card-editor");
   customElements.define("meteocat-card-editor", MeteocatCardEditor);
-} else {
-  console.log("MeteocatCardEditor: Custom element meteocat-card-editor already defined");
 }

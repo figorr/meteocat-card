@@ -55,7 +55,7 @@ Supports animated or static icons with day/night variants, and shows hourly and 
 
 6. Refresh or hard refresh your web browser.
 
-   #### To perform a refresh
+   #### 6.1 To perform a refresh
    ##### - On Windows and Linux
    - Ctrl + F5
      : This is the universal shortcut for a hard refresh in most browsers. 
@@ -70,7 +70,10 @@ Supports animated or static icons with day/night variants, and shows hourly and 
    - Shift + Click the Reload Button
      : In Safari, you can hold the Shift key and click the reload icon to bypass the cache. 
    - Command + Option + E then Reload
-     : For a hard refresh in Safari, first press Command + Option + E to empty the cache, then click the Reload button in the toolbar.  
+     : For a hard refresh in Safari, first press Command + Option + E to empty the cache, then click the Reload button in the toolbar.
+
+   #### 6.2 Delete navigation data
+   Sometimes a refresh is not enough and it is mandatory to delete the navigation data from the web browser. Please take a look at the Wiki [Troubleshooting](https://github.com/figorr/meteocat-card/wiki/Troubleshooting)
 
 ## Icon Path Setup
 
@@ -151,10 +154,16 @@ s-rainy-night.svg
    ```yaml
    type: custom:meteocat-card
    entity: weather.home
+   default_forecast_view: daily
    option_static_icons: false  # set true for static icons
    icon_path_type: hacs
    iconPath: /hacsfiles/meteocat-card/
+   option_show_sun_info: true
+   option_show_sun_times: true
+   option_show_moon_info: true
+   option_show_moon_times: true
    debug: false
+   fade_duration: 0.3
    ```
 
    - entity: Your Meteocat Weather entity (e.g., weather.meteocat_yourtown)
@@ -173,10 +182,16 @@ s-rainy-night.svg
       ```yaml
       type: custom:meteocat-card
       entity: weather.meteocat_station_id_weather_town_name
+      default_forecast_view: daily
       option_static_icons: false
       icon_path_type: manual
       iconPath: /local/meteocat-card/icons/
+      option_show_sun_info: true
+      option_show_sun_times: true
+      option_show_moon_info: true
+      option_show_moon_times: true
       debug: false
+      fade_duration: 0.3
       ```
 
    **The card shows:**
@@ -188,13 +203,19 @@ s-rainy-night.svg
 
 ## Configuration Options
 
-| Option               | Type    | Default                          | Description                                            |
-|----------------------|--------|-----------------------------------|--------------------------------------------------------|
-| `entity`             | string | —                                 | **Required.** Your Meteocat weather entity.            |
-| `option_static_icons`| boolean| `false`                           | Use static icons (`true`) or animated icons (`false`). |
-| `icon_path_type`     | string | `hacs`                            | Use `hacs` or `manual` according to your installation. |
-| `iconPath`           | string | `/hacsfiles/meteocat-card/`       | Path to the folder containing the SVG icons.           |
-| `debug`              | boolean| `false`                           | Use `true` to enable debug.                            |
+| Option                   | Type    | Default                           | Description                                                |
+|--------------------------|-------- |-----------------------------------|------------------------------------------------------------|
+| `entity`                 | string  | —                                 | **Required.** Your Meteocat weather entity.                |
+| `default_forecast_view`  | boolean | `daily`                           | Use daily view (`daily`) or hourly view (`hourly`).        |
+| `option_static_icons`    | boolean | `false`                           | Use static icons (`true`) or animated icons (`false`).     |
+| `icon_path_type`         | string  | `hacs`                            | Use `hacs` or `manual` according to your installation.     |
+| `iconPath`               | string  | `/hacsfiles/meteocat-card/`       | Path to the folder containing the SVG icons.               |
+| `option_show_sun_info`   | boolean | `true`                            | Use `false` to disable sun info sensors.                   |
+| `option_show_sun_times`  | boolean | `true`                            | Use `false` to disable sunrise and sunset sensors.         |
+| `option_show_moon_info`  | boolean | `true`                            | Use `false` to disable moon info sensors.                  |
+| `option_show_moon_times` | boolean | `true`                            | Use `false` to disable moonrise and moonset sensors.       |
+| `debug`                  | boolean | `false`                           | Use `true` to enable debug.                                |
+| `fade_duration`          | float   | `0.3`                             | Value between `0.0` and `1.0` for transition daily/hourly. |
 
 ## Notes
 
@@ -209,10 +230,16 @@ s-rainy-night.svg
 ```yaml
 type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
+default_forecast_view: daily
 option_static_icons: false
 icon_path_type: hacs
 iconPath: /hacsfiles/meteocat-card/
+option_show_sun_info: true
+option_show_sun_times: true
+option_show_moon_info: true
+option_show_moon_times: true
 debug: false
+fade_duration: 0.3
 ```
 
 ### Using Animated Icons
@@ -220,10 +247,16 @@ debug: false
 ```yaml
 type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
+default_forecast_view: daily
 option_static_icons: false
 icon_path_type: hacs
 iconPath: /hacsfiles/meteocat-card/
+option_show_sun_info: true
+option_show_sun_times: true
+option_show_moon_info: true
+option_show_moon_times: true
 debug: false
+fade_duration: 0.3
 ```
 
 ### Using Static Icons
@@ -231,10 +264,16 @@ debug: false
 ```yaml
 type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
+default_forecast_view: daily
 option_static_icons: true
 icon_path_type: hacs
 iconPath: /hacsfiles/meteocat-card/
+option_show_sun_info: true
+option_show_sun_times: true
+option_show_moon_info: true
+option_show_moon_times: true
 debug: false
+fade_duration: 0.3
 ```
 
 ### Example Display
@@ -255,11 +294,11 @@ debug: false
 
 #### Daily Forecast:
 
-![Meteocat Card current weather with alerts](images/daily_forecast_2_alerts.png)
+![Meteocat Card current weather with alerts](images/daily_forecast_no_alerts.png)
 
 #### Hourly Forecast:
 
-![Meteocat Card current weather with alerts](images/houryly_forecast_2_alerts.png)
+![Meteocat Card current weather with alerts](images/houryly_forecast_no_alerts.png)
 
 ## Features
 
