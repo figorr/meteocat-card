@@ -1,3 +1,10 @@
+## [3.0.1](https://github.com/figorr/meteocat-card/compare/v3.0.0...v3.0.1) (2026-01-04)
+
+
+### Bug Fixes
+
+* add translation for new snow thresholds ([cac9df8](https://github.com/figorr/meteocat-card/commit/cac9df81e497a3c07adb3dbe22186c1d14ab1d71))
+
 # [3.0.0](https://github.com/figorr/meteocat-card/compare/v2.2.0...v3.0.0) (2025-11-07)
 
 🌤️ Release Meteocat Card v3.0.0 — enhanced solar, lunar, and forecast display
