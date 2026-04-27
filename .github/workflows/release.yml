@@ -16,15 +16,15 @@ jobs:
     steps:
       # 1️⃣ Checkout completo
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       # 2️⃣ Configurar Node.js
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
 
       # 3️⃣ Instalar dependencias
       - name: Install dependencies
