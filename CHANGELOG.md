@@ -1,3 +1,10 @@
+## [3.0.2](https://github.com/figorr/meteocat-card/compare/v3.0.1...v3.0.2) (2026-04-27)
+
+
+### Bug Fixes
+
+* new rain intensity meteors and wind thresholds ([7912c1c](https://github.com/figorr/meteocat-card/commit/7912c1c91385a9179268e93885831bf7caeed6f1))
+
 ## [3.0.1](https://github.com/figorr/meteocat-card/compare/v3.0.0...v3.0.1) (2026-01-04)
 
 
