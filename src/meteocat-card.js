@@ -1758,5 +1758,5 @@ window.customCards.push({
   type: "meteocat-card",
   name: getTranslation(null, 'card_name', {}, "Meteocat Card"),
   description: getTranslation(null, 'card_description', {}, "Tarjeta personalizada para mostrar datos de Meteocat."),
-  preview: false,
+  preview: true,
 });
