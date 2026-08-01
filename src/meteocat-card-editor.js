@@ -20,6 +20,8 @@ const translations = {
     option_show_moon_info: "Phase / Illumination",
     sun_options: "Sun options",
     moon_options: "Moon options",
+    eto_options: "Evapotranspiration options",
+    option_show_eto: "Evapotranspiration",
   },
   es: {
     title_default: "Meteocat",
@@ -41,6 +43,8 @@ const translations = {
     option_show_moon_info: "Fase / Iluminación",
     sun_options: "Opciones sol",
     moon_options: "Opciones luna",
+    eto_options: "Opciones de evapotranspiración",
+    option_show_eto: "Evapotranspiración",
   },
   ca: {
     title_default: "Meteocat",
@@ -62,6 +66,8 @@ const translations = {
     option_show_moon_info: "Fase / Il·luminació",
     sun_options: "Opcions sol",
     moon_options: "Opcions lluna",
+    eto_options: "Opcions d'evapotranspiració",
+    option_show_eto: "Evapotranspiració",
   },
 };
 
@@ -101,6 +107,7 @@ class MeteocatCardEditor extends HTMLElement {
       option_show_sun_times: true,
       option_show_moon_info: true,
       option_show_moon_times: true,
+      option_show_eto: true,
       debug: false,
       ...config,
     };
@@ -125,6 +132,7 @@ class MeteocatCardEditor extends HTMLElement {
       this._form.generalForm.hass = hass;
       this._form.sunForm.hass = hass;
       this._form.moonForm.hass = hass;
+      this._form.etoForm.hass = hass;
     } else if (this.isConnected) {
       this._render();
     }
@@ -147,22 +155,25 @@ class MeteocatCardEditor extends HTMLElement {
       :host {
         --mc-general-label-font-size: 1rem;
         --mc-label-font-size: 0.875rem;
-        --mc-form-vertical-spacing: 8px;
+        --mc-form-vertical-spacing: 0px;
       }
 
       .section-label {
         font-size: var(--mc-general-label-font-size);
         font-weight: normal;
-        margin: 18px 0 8px;
-        padding-top: 10px;
+        margin: 12px 0 4px;
+        padding-top: 8px;
         border-top: 2px solid var(--divider-color, rgba(0,0,0,0.06));
         color: var(--primary-text-color);
       }
 
-      .group { margin-bottom: 6px; }
+      .group { margin-bottom: 4px; }
       .indented-form { margin-left: 16px; }
       .indented-form ha-formfield:not(:last-child) {
         margin-bottom: var(--mc-form-vertical-spacing);
+      }
+      .indented-form ha-form ha-formfield {
+        min-height: 32px;
       }
 
       :not(.indented-form) ha-form ha-formfield label.mdc-label {
@@ -275,6 +286,17 @@ class MeteocatCardEditor extends HTMLElement {
         "indented-form"
       );
 
+      // Evapotranspiración
+      const etoForm = makeForm(
+        {
+          option_show_eto: this._config.option_show_eto,
+        },
+        [
+          { name: "option_show_eto", selector: { boolean: {} } },
+        ],
+        "indented-form"
+      );
+
       // === Manejador común de eventos ===
       const handleChange = (ev) => {
         const v = ev.detail.value || {};
@@ -290,7 +312,7 @@ class MeteocatCardEditor extends HTMLElement {
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: updated }, bubbles: true, composed: true }));
       };
 
-      [generalForm, sunForm, moonForm].forEach((f) =>
+      [generalForm, sunForm, moonForm, etoForm].forEach((f) =>
         f.addEventListener("value-changed", handleChange)
       );
 
@@ -311,11 +333,12 @@ class MeteocatCardEditor extends HTMLElement {
       wrapper.append(
         makeSection(null, generalForm),
         makeSection("sun_options", sunForm),
-        makeSection("moon_options", moonForm)
+        makeSection("moon_options", moonForm),
+        makeSection("eto_options", etoForm)
       );
 
       this.shadowRoot.appendChild(wrapper);
-      this._form = { generalForm, sunForm, moonForm };
+      this._form = { generalForm, sunForm, moonForm, etoForm };
     } catch (err) {
       console.error("MeteocatCardEditor render error:", err);
       const errorDiv = document.createElement("div");

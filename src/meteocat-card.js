@@ -16,6 +16,8 @@ const translations = {
     pressure: "{value} hPa",
     uv_index: "{value}",
     solar_global_irradiance: "{value} W/m²",
+    eto_daily: "ETo {value} mm",
+    eto_hourly: "ETo {value} mm/h",
     below_horizon: "Below horizon",
     above_horizon: "Above horizon",
     azimuth: "{value}°",
@@ -194,6 +196,8 @@ const translations = {
     pressure: "{value} hPa",
     uv_index: "{value}",
     solar_global_irradiance: "{value} W/m²",
+    eto_daily: "ETo {value} mm",
+    eto_hourly: "ETo {value} mm/h",
     below_horizon: "Bajo horizonte",
     above_horizon: "Sobre horizonte",
     azimuth: "{value}°",
@@ -372,6 +376,8 @@ const translations = {
     pressure: "{value} hPa",
     uv_index: "{value}",
     solar_global_irradiance: "{value} W/m²",
+    eto_daily: "ETo {value} mm",
+    eto_hourly: "ETo {value} mm/h",
     below_horizon: "Sota horitzó",
     above_horizon: "Sobre horitzó",
     azimuth: "{value}°",
@@ -616,6 +622,7 @@ class MeteocatCard extends HTMLElement {
       option_show_sun_times: true,
       option_show_moon_info: true,
       option_show_moon_times: true,
+      option_show_eto: true,
     };
   }
 
@@ -632,6 +639,7 @@ class MeteocatCard extends HTMLElement {
       option_show_sun_times: true,
       option_show_moon_info: true,
       option_show_moon_times: true,
+      option_show_eto: true,
       ...config,
       title: undefined,
       sunrise_entity: undefined,
@@ -700,6 +708,10 @@ class MeteocatCard extends HTMLElement {
       this._config.solar_global_irradiance_entity = this._config.solar_global_irradiance_entity || findByKey("solar_global_irradiance");
       this._config.sun_entity = this._config.sun_entity || findByKey("sun");
 
+      // Sensores de evapotranspiración (gardenpy-meteocat)
+      this._config.eto_daily_entity = this._config.eto_daily_entity || findByKey("eto_daily");
+      this._config.eto_hourly_entity = this._config.eto_hourly_entity || findByKey("eto_hourly");
+
       // Nuevas entidades agregadas para overrides
       this._config.pressure_entity = this._config.pressure_entity || findByKey("pressure");
       this._config.uv_index_entity = this._config.uv_index_entity || findByKey("uv_index");
@@ -746,6 +758,8 @@ class MeteocatCard extends HTMLElement {
         humidity: this._config.humidity_entity,
         solar_global_irradiance: this._config.solar_global_irradiance_entity,
         sun: this._config.sun_entity,
+        eto_daily: this._config.eto_daily_entity,
+        eto_hourly: this._config.eto_hourly_entity,
         pressure: this._config.pressure_entity,
         uv_index: this._config.uv_index_entity,
         temperature: this._config.temperature_entity,
@@ -1142,6 +1156,8 @@ class MeteocatCard extends HTMLElement {
       const windSpeed = this._config.wind_speed_entity ? this._hass.states[this._config.wind_speed_entity]?.state ?? "-" : entity.attributes?.wind_speed ?? "-";
       const humidity = this._config.humidity_entity ? this._hass.states[this._config.humidity_entity]?.state ?? "-" : entity.attributes?.humidity ?? "-";
       const solarGlobalIrradiance = this._config.solar_global_irradiance_entity ? this._hass.states[this._config.solar_global_irradiance_entity]?.state ?? "-" : entity.attributes?.solar_global_irradiance ?? "-";
+      const etoDaily = this._config.eto_daily_entity ? this._hass.states[this._config.eto_daily_entity]?.state ?? "-" : "-";
+      const etoHourly = this._config.eto_hourly_entity ? this._hass.states[this._config.eto_hourly_entity]?.state ?? "-" : "-";
       const sun = this._config.sun_entity ? this._hass.states[this._config.sun_entity] : null;
       const sunState = sun?.state ? getTranslation(this._hass, sun.state, {}, sun.state) : "-";
       const sunAzimuth = sun?.attributes?.azimuth ?? "-";
@@ -1396,6 +1412,13 @@ class MeteocatCard extends HTMLElement {
           <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: `UV ${this._formatNumber(uvIndex)}` })}</div>
           <div class="detail"><ha-icon icon="mdi:sun-wireless-outline"></ha-icon>${getTranslation(this._hass, 'solar_global_irradiance', { value: this._formatNumber(solarGlobalIrradiance, 0) })}</div>
       `;
+
+      if (this._config.option_show_eto) {
+        detailsHtml += `
+          <div class="detail"><ha-icon icon="mdi:water-outline"></ha-icon>${getTranslation(this._hass, 'eto_hourly', { value: this._formatNumber(etoHourly) })}</div>
+          <div class="detail"><ha-icon icon="mdi:water-outline"></ha-icon>${getTranslation(this._hass, 'eto_daily', { value: this._formatNumber(etoDaily) })}</div>
+        `;
+      }
 
       if (this._config.option_show_sun_info) {
         detailsHtml += `
