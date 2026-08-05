@@ -1,3 +1,16 @@
+# [3.1.0](https://github.com/figorr/meteocat-card/compare/v3.0.2...v3.1.0) (2026-08-05)
+
+
+### Bug Fixes
+
+* fix release workflow ([9751b7c](https://github.com/figorr/meteocat-card/commit/9751b7c2db5e35d49c49cd21fe69d4fd68b9d92a))
+* include preview in card selector ([4c528ec](https://github.com/figorr/meteocat-card/commit/4c528ec19c7b46c9e124bc092d71c0cab52d0cd8))
+
+
+### Features
+
+* add evapotranspiration (ETo) sensors display ([34f5509](https://github.com/figorr/meteocat-card/commit/34f55090b38c9410c283972370602e576242f53b))
+
 ## [3.0.2](https://github.com/figorr/meteocat-card/compare/v3.0.1...v3.0.2) (2026-04-27)
 
 
