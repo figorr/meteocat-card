@@ -567,13 +567,40 @@ function getCardinalDirections(hass) {
   return translations[lang]?.cardinal_directions || translations.en.cardinal_directions;
 }
 
+const MARKETPLACE_ICON_PATH = "/local/community/meteocat-card/";
+const MANUAL_ICON_PATH = "/local/meteocat-card/icons/";
+const LEGACY_HACS_ICON_PREFIX = "/hacsfiles/meteocat-card";
+const MARKETPLACE_ICON_PREFIX = "/local/community/meteocat-card";
+
+function normalizeIconPathType(type) {
+  return type === "manual" ? "manual" : "marketplace";
+}
+
+function isLegacyHacsIconPath(path) {
+  return typeof path === "string" && path.startsWith(LEGACY_HACS_ICON_PREFIX);
+}
+
+function resolveIconPath(config) {
+  const type = normalizeIconPathType(config.icon_path_type);
+  if (isLegacyHacsIconPath(config.iconPath)) {
+    return config.iconPath.replace(
+      LEGACY_HACS_ICON_PREFIX,
+      MARKETPLACE_ICON_PREFIX
+    );
+  }
+  if (config.iconPath) {
+    return config.iconPath;
+  }
+  return type === "manual" ? MANUAL_ICON_PATH : MARKETPLACE_ICON_PATH;
+}
+
 class MeteocatCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this._content = document.createElement("div");
     this.shadowRoot.appendChild(this._content);
-    this.iconPath = "/hacsfiles/meteocat-card/";
+    this.iconPath = MARKETPLACE_ICON_PATH;
     this.useStaticIcons = false;
     this._currentForecast = "daily";
     this._dailyForecasts = [];
@@ -614,8 +641,8 @@ class MeteocatCard extends HTMLElement {
     return {
       entity: "weather.home",
       option_static_icons: false,
-      icon_path_type: "hacs",
-      iconPath: "/hacsfiles/meteocat-card/",
+      icon_path_type: "marketplace",
+      iconPath: MARKETPLACE_ICON_PATH,
       debug: false,
       fade_duration: 0.3, // Duración por defecto del fade
       option_show_sun_info: true,
@@ -632,7 +659,7 @@ class MeteocatCard extends HTMLElement {
       type: "meteocat-card",
       default_forecast_view: "daily",
       option_static_icons: false,
-      iconPath: "/hacsfiles/meteocat-card/",
+      icon_path_type: "marketplace",
       debug: false,
       fade_duration: 0.3, // Duración por defecto del fade
       option_show_sun_info: true,
@@ -650,7 +677,11 @@ class MeteocatCard extends HTMLElement {
     delete this._config.sunrise_entity;
     delete this._config.sunset_entity;
     this._currentForecast = this._config.default_forecast_view === "hourly" ? "hourly" : "daily";
-    this.iconPath = this._config.iconPath || "/hacsfiles/meteocat-card/";
+    this._config.icon_path_type = normalizeIconPathType(
+      this._config.icon_path_type
+    );
+    this.iconPath = resolveIconPath(this._config);
+    this._config.iconPath = this.iconPath;
     this._fadeDuration = parseFloat(this._config.fade_duration) || 0.3; // Configuración de duración del fade
     this._debug = !!this._config.debug;
     this._log("iconPath set to", this.iconPath, "fadeDuration set to", this._fadeDuration);

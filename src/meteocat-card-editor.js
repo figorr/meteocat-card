@@ -11,7 +11,7 @@ const translations = {
     default_forecast_view: "Default forecast view",
     option_static_icons: "Static icons",
     icon_path_type: "Icons path",
-    icon_path_type_hacs: "HACS installation",
+    icon_path_type_marketplace: "Marketplace installation",
     icon_path_type_manual: "Manual installation",
     debug: "Enable debug logging",
     option_show_sun_times: "Sunrise / Sunset",
@@ -34,7 +34,7 @@ const translations = {
     default_forecast_view: "Vista de previsión por defecto",
     option_static_icons: "Iconos estáticos",
     icon_path_type: "Ruta de iconos",
-    icon_path_type_hacs: "Instalación HACS",
+    icon_path_type_marketplace: "Instalación Marketplace",
     icon_path_type_manual: "Instalación manual",
     debug: "Habilitar registro de depuración",
     option_show_sun_times: "Amanecer / Atardecer",
@@ -57,7 +57,7 @@ const translations = {
     default_forecast_view: "Vista de previsió per defecte",
     option_static_icons: "Icones estàtiques",
     icon_path_type: "Ruta d'icones",
-    icon_path_type_hacs: "Instal·lació HACS",
+    icon_path_type_marketplace: "Instal·lació Marketplace",
     icon_path_type_manual: "Instal·lació manual",
     debug: "Habilitar registre de depuració",
     option_show_sun_times: "Sortida / Posta de sol",
@@ -70,6 +70,33 @@ const translations = {
     option_show_eto: "Evapotranspiració",
   },
 };
+
+const MARKETPLACE_ICON_PATH = "/local/community/meteocat-card/";
+const MANUAL_ICON_PATH = "/local/meteocat-card/icons/";
+const LEGACY_HACS_ICON_PREFIX = "/hacsfiles/meteocat-card";
+const MARKETPLACE_ICON_PREFIX = "/local/community/meteocat-card";
+
+function normalizeIconPathType(type) {
+  return type === "manual" ? "manual" : "marketplace";
+}
+
+function isLegacyHacsIconPath(path) {
+  return typeof path === "string" && path.startsWith(LEGACY_HACS_ICON_PREFIX);
+}
+
+function resolveIconPath(config) {
+  const type = normalizeIconPathType(config.icon_path_type);
+  if (isLegacyHacsIconPath(config.iconPath)) {
+    return config.iconPath.replace(
+      LEGACY_HACS_ICON_PREFIX,
+      MARKETPLACE_ICON_PREFIX
+    );
+  }
+  if (config.iconPath) {
+    return config.iconPath;
+  }
+  return type === "manual" ? MANUAL_ICON_PATH : MARKETPLACE_ICON_PATH;
+}
 
 // Helper de traducciones
 function getTranslation(hass, key, params = {}, fallback = key) {
@@ -102,7 +129,7 @@ class MeteocatCardEditor extends HTMLElement {
       entity: "weather.home",
       default_forecast_view: "daily",
       option_static_icons: false,
-      icon_path_type: "hacs",
+      icon_path_type: "marketplace",
       option_show_sun_info: true,
       option_show_sun_times: true,
       option_show_moon_info: true,
@@ -112,10 +139,10 @@ class MeteocatCardEditor extends HTMLElement {
       ...config,
     };
 
-    this._config.iconPath =
-      this._config.icon_path_type === "hacs"
-        ? "/hacsfiles/meteocat-card/"
-        : "/local/meteocat-card/icons/";
+    this._config.icon_path_type = normalizeIconPathType(
+      this._config.icon_path_type
+    );
+    this._config.iconPath = resolveIconPath(this._config);
 
     // Limpieza de claves no necesarias
     delete this._config.title;
@@ -250,7 +277,7 @@ class MeteocatCardEditor extends HTMLElement {
             selector: {
               select: {
                 options: [
-                  { value: "hacs", label: getTranslation(this._hass, "icon_path_type_hacs") },
+                  { value: "marketplace", label: getTranslation(this._hass, "icon_path_type_marketplace") },
                   { value: "manual", label: getTranslation(this._hass, "icon_path_type_manual") },
                 ],
               },
@@ -302,11 +329,14 @@ class MeteocatCardEditor extends HTMLElement {
         const v = ev.detail.value || {};
         const updated = { ...this._config, ...v };
         updated.type = "custom:meteocat-card";
-        if (v.icon_path_type !== undefined) {
+        const iconPathType = normalizeIconPathType(v.icon_path_type);
+        if (
+          v.icon_path_type !== undefined &&
+          iconPathType !== this._config.icon_path_type
+        ) {
+          updated.icon_path_type = iconPathType;
           updated.iconPath =
-            v.icon_path_type === "hacs"
-              ? "/hacsfiles/meteocat-card/"
-              : "/local/meteocat-card/icons/";
+            iconPathType === "manual" ? MANUAL_ICON_PATH : MARKETPLACE_ICON_PATH;
         }
         this._config = updated;
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: updated }, bubbles: true, composed: true }));

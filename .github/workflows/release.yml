@@ -60,8 +60,8 @@ jobs:
             echo "release_tag=" >> $GITHUB_OUTPUT
           fi
 
-      # 8️⃣ Crear estructura de carpetas HACS
-      - name: Prepare HACS folder structure
+      # 8️⃣ Crear estructura del ZIP manual
+      - name: Prepare manual ZIP structure
         if: steps.get_tag.outputs.release_tag != ''
         run: |
           rm -rf tmp
@@ -79,12 +79,16 @@ jobs:
           cd ..
           echo "ZIP created at $PWD/meteocat-card.zip"
 
-      # 10️⃣ Subir ZIP como asset al release
-      - name: Upload ZIP to release
+      # 🔟 Subir assets del release
+      - name: Upload release assets
         if: steps.get_tag.outputs.release_tag != ''
         uses: softprops/action-gh-release@v1
         with:
-          files: meteocat-card.zip
+          files: |
+            dist/meteocat-card.js
+            dist/meteocat-card-editor.js
+            icons/*.svg
+            meteocat-card.zip
           tag_name: ${{ steps.get_tag.outputs.release_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

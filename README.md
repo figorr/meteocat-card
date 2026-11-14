@@ -2,7 +2,7 @@
 ![Meteocat Banner](images/banner.png)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ![JavaScript](https://img.shields.io/badge/Language-JavaScript-yellow)
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/plugin)
+[![Marketplace](https://img.shields.io/badge/Marketplace-Default-orange.svg)](https://www.home-assistant.io/integrations/marketplace/)
 [![Validate](https://github.com/figorr/meteocat-card/actions/workflows/validate.yaml/badge.svg)](https://github.com/figorr/meteocat-card/actions/workflows/validate.yaml)
 [![Release](https://github.com/figorr/meteocat-card/actions/workflows/release.yml/badge.svg)](https://github.com/figorr/meteocat-card/actions/workflows/release.yml)
 ![GitHub all releases](https://img.shields.io/github/downloads/figorr/meteocat-card/total)
@@ -14,11 +14,32 @@ Supports animated or static icons with day/night variants, and shows hourly and 
 
 ## Installation
 
-### HACS (From the Store)
+Starting with Home Assistant 2026.11, [HACS is built into Home Assistant as the Marketplace](https://www.home-assistant.io/integrations/marketplace/). On Home Assistant 2026.10 or older, use the HACS instructions below.
 
-1. Open **HACS**.  
+### Marketplace (Home Assistant 2026.11 or newer)
+
+#### From the catalog
+
+1. Go to **Settings > Marketplace**.
+2. Search for **Meteocat Card** and open its repository page.
+3. Select **Install**.
+4. Refresh Lovelace and your browser.
+
+#### Using a custom repository
+
+Use this only if **Meteocat Card** is not available in the Marketplace catalog.
+
+1. Go to **Settings > Marketplace**.
+2. Select **Add from link** and enter `https://github.com/figorr/meteocat-card`.
+3. Select **Add**. A GitHub connection is required for custom repositories.
+4. Open the **Meteocat Card** repository and select **Install**.
+5. Refresh Lovelace and your browser.
+
+### HACS (Home Assistant 2026.10 or older)
+
+1. Open **HACS**.
 2. Search for **Meteocat Card** and install it.
-3. Refresh the Lovelace
+3. Refresh Lovelace and your browser.
 
 ### Manual
 1. Download the `meteocat-card.zip` file from the latest release. 
@@ -32,7 +53,7 @@ Supports animated or static icons with day/night variants, and shows hourly and 
    /config/www/meteocat-card/meteocat-card-editor.js
    ```
 
-4. Place the icon SVGs that are located in /www/meteocat-card/icons into your Home Assistant setup at:
+4. Copy the `icons` folder included in the release to your Home Assistant setup at:
 
    ```text
    /config/www/meteocat-card/icons/
@@ -77,13 +98,19 @@ Supports animated or static icons with day/night variants, and shows hourly and 
 
 ## Icon Path Setup
 
-The card needs to know the path to its custom icons. The path depends on how you installed the card, by default HACS installation.
+The card needs to know the path to its custom icons. The path depends on how you installed the card. The default is **Marketplace installation**.
 
-So if you are using the visual editor you can pick **manual** or **HACS intallation**, the card will set the proper icon path.
+In the visual editor, pick **Marketplace installation** or **Manual installation** and the card will set the proper icon path.
 
-In case you are using code editor, the **HACS installation icon path** is the option set by default.
+When using the code editor, **Marketplace installation** is the default option.
 
-You can edit the icons path if you placed the icons in a different place. You have to edit **iconPath**: `iconPath: /hacsfiles/meteocat-card/icons/`
+You can edit the icon path if you placed the icons somewhere else. Change **iconPath** in the card YAML.
+
+### Marketplace installation:
+
+`/local/community/meteocat-card/`
+
+Marketplace installs the icons in the same folder as the card. Existing configurations using `icon_path_type: hacs` or an `/hacsfiles/...` path are migrated automatically to the equivalent `/local/...` path.
 
 ### Manual installation:
 
@@ -92,10 +119,6 @@ You can edit the icons path if you placed the icons in a different place. You ha
 or which is the same:
 
 `/config/www/meteocat-card/icons/`
-
-### HACS installation:
-
-`/hacsfiles/meteocat-card/`
 
 #### Visual editor example
 
@@ -156,8 +179,8 @@ s-rainy-night.svg
    entity: weather.home
    default_forecast_view: daily
    option_static_icons: false  # set true for static icons
-   icon_path_type: hacs
-   iconPath: /hacsfiles/meteocat-card/
+   icon_path_type: marketplace
+   iconPath: /local/community/meteocat-card/
    option_show_sun_info: true
    option_show_sun_times: true
    option_show_moon_info: true
@@ -208,8 +231,8 @@ s-rainy-night.svg
 | `entity`                 | string  | —                                 | **Required.** Your Meteocat weather entity.                |
 | `default_forecast_view`  | boolean | `daily`                           | Use daily view (`daily`) or hourly view (`hourly`).        |
 | `option_static_icons`    | boolean | `false`                           | Use static icons (`true`) or animated icons (`false`).     |
-| `icon_path_type`         | string  | `hacs`                            | Use `hacs` or `manual` according to your installation.     |
-| `iconPath`               | string  | `/hacsfiles/meteocat-card/`       | Path to the folder containing the SVG icons.               |
+| `icon_path_type`         | string  | `marketplace`                     | Use `marketplace` or `manual` according to your installation. Legacy `hacs` is migrated automatically. |
+| `iconPath`               | string  | `/local/community/meteocat-card/` | Path to the folder containing the SVG icons.          |
 | `option_show_sun_info`   | boolean | `true`                            | Use `false` to disable sun info sensors.                   |
 | `option_show_sun_times`  | boolean | `true`                            | Use `false` to disable sunrise and sunset sensors.         |
 | `option_show_moon_info`  | boolean | `true`                            | Use `false` to disable moon info sensors.                  |
@@ -232,8 +255,8 @@ type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
 default_forecast_view: daily
 option_static_icons: false
-icon_path_type: hacs
-iconPath: /hacsfiles/meteocat-card/
+icon_path_type: marketplace
+iconPath: /local/community/meteocat-card/
 option_show_sun_info: true
 option_show_sun_times: true
 option_show_moon_info: true
@@ -249,8 +272,8 @@ type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
 default_forecast_view: daily
 option_static_icons: false
-icon_path_type: hacs
-iconPath: /hacsfiles/meteocat-card/
+icon_path_type: marketplace
+iconPath: /local/community/meteocat-card/
 option_show_sun_info: true
 option_show_sun_times: true
 option_show_moon_info: true
@@ -266,8 +289,8 @@ type: custom:meteocat-card
 entity: weather.meteocat_station_id_weather_town_name
 default_forecast_view: daily
 option_static_icons: true
-icon_path_type: hacs
-iconPath: /hacsfiles/meteocat-card/
+icon_path_type: marketplace
+iconPath: /local/community/meteocat-card/
 option_show_sun_info: true
 option_show_sun_times: true
 option_show_moon_info: true
