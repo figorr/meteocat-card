@@ -1,3 +1,10 @@
+# [3.2.0](https://github.com/figorr/meteocat-card/compare/v3.1.0...v3.2.0) (2026-11-15)
+
+
+### Features
+
+* support Home Assistant Marketplace installation ([9251813](https://github.com/figorr/meteocat-card/commit/925181374b9f35d968abf00dfadafa5091559ae2))
+
 # [3.1.0](https://github.com/figorr/meteocat-card/compare/v3.0.2...v3.1.0) (2026-08-05)
 
 
