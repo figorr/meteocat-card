@@ -26,7 +26,8 @@
         "assets": [
           "dist/meteocat-card.js",
           "dist/meteocat-card-editor.js",
-          "icons/*"
+          "icons/*",
+          "meteocat-card.zip"
         ]
       }
     ]
