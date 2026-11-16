@@ -615,6 +615,24 @@ function resolveIconPath(config) {
   return type === "manual" ? MANUAL_ICON_PATH : MARKETPLACE_ICON_PATH;
 }
 
+function detectInstalledIconPath() {
+  try {
+    const basePath = new URL("./", import.meta.url).pathname;
+    if (basePath.includes("/community/meteocat-card/")) {
+      return { type: "marketplace", path: basePath };
+    }
+    if (basePath.startsWith(LEGACY_HACS_ICON_PREFIX)) {
+      return { type: "marketplace", path: MARKETPLACE_ICON_PATH };
+    }
+    if (basePath.endsWith("/meteocat-card/")) {
+      return { type: "manual", path: `${basePath}icons/` };
+    }
+  } catch {
+    return { type: "marketplace", path: MARKETPLACE_ICON_PATH };
+  }
+  return { type: "marketplace", path: MARKETPLACE_ICON_PATH };
+}
+
 class MeteocatCard extends HTMLElement {
   constructor() {
     super();
@@ -653,17 +671,18 @@ class MeteocatCard extends HTMLElement {
   }
 
   static getStubConfig(hass) {
-    if (hass) {
-      const weatherEntities = Object.values(hass.states)
-        .filter(s => s.entity_id.startsWith("weather."))
-        .map(s => ({ entity_id: s.entity_id, friendly_name: s.attributes?.friendly_name }));
-      console.log("MeteocatCard: Available weather entities =", weatherEntities);
-    }
+    const weatherEntities = Object.keys(hass?.states || {}).filter(
+      (entityId) => entityId.startsWith("weather.")
+    );
+    const meteocatWeather = weatherEntities.find(
+      (entityId) => hass?.entities?.[entityId]?.platform === "meteocat"
+    );
+    const iconConfig = detectInstalledIconPath();
     return {
-      entity: "weather.home",
+      entity: meteocatWeather || weatherEntities[0] || "weather.home",
       option_static_icons: false,
-      icon_path_type: "marketplace",
-      iconPath: MARKETPLACE_ICON_PATH,
+      icon_path_type: iconConfig.type,
+      iconPath: iconConfig.path,
       debug: false,
       fade_duration: 0.3, // Duración por defecto del fade
       option_show_sun_info: true,
@@ -2047,4 +2066,9 @@ window.customCards.push({
   name: getTranslation(null, 'card_name', {}, "Meteocat Card"),
   description: getTranslation(null, 'card_description', {}, "Tarjeta personalizada para mostrar datos de Meteocat."),
   preview: true,
+  getEntitySuggestion: (hass, entityId) => {
+    if (typeof entityId !== "string" || !entityId.startsWith("weather.")) return null;
+    if (hass?.entities?.[entityId]?.platform !== "meteocat") return null;
+    return { config: { type: "custom:meteocat-card", entity: entityId } };
+  },
 });
