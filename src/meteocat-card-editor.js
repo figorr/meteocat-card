@@ -22,6 +22,7 @@ const translations = {
     moon_options: "Moon options",
     eto_options: "Evapotranspiration options",
     option_show_eto: "Evapotranspiration",
+    option_show_chart: "Show forecast trend",
   },
   es: {
     title_default: "Meteocat",
@@ -45,6 +46,7 @@ const translations = {
     moon_options: "Opciones luna",
     eto_options: "Opciones de evapotranspiración",
     option_show_eto: "Evapotranspiración",
+    option_show_chart: "Mostrar gráfico de tendencia",
   },
   ca: {
     title_default: "Meteocat",
@@ -68,6 +70,7 @@ const translations = {
     moon_options: "Opcions lluna",
     eto_options: "Opcions d'evapotranspiració",
     option_show_eto: "Evapotranspiració",
+    option_show_chart: "Mostrar gràfic de tendència",
   },
 };
 
@@ -135,6 +138,7 @@ class MeteocatCardEditor extends HTMLElement {
       option_show_moon_info: true,
       option_show_moon_times: true,
       option_show_eto: true,
+      option_show_chart: false,
       debug: false,
       ...config,
     };
@@ -258,6 +262,7 @@ class MeteocatCardEditor extends HTMLElement {
           default_forecast_view: this._config.default_forecast_view || "daily",
           icon_path_type: this._config.icon_path_type,
           option_static_icons: this._config.option_static_icons,
+          option_show_chart: this._config.option_show_chart,
         },
         [
           { name: "entity", selector: { entity: { filter: [{ domain: "weather", integration: "meteocat" }] } } },
@@ -284,6 +289,7 @@ class MeteocatCardEditor extends HTMLElement {
             },
           },
           { name: "option_static_icons", selector: { boolean: {} } },
+          { name: "option_show_chart", selector: { boolean: {} } },
         ]
       );
 

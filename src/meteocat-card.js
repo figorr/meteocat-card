@@ -33,6 +33,12 @@ const translations = {
     hourly_forecast: "Hourly Forecast",
     daily: "Daily",
     hourly: "Hourly",
+    forecast_trend: "Forecast trend",
+    chart_temperature: "Temperature",
+    chart_max: "Max",
+    chart_min: "Min",
+    chart_rain: "Rain",
+    chart_rain_max: "max {value} mm",
     today: "Today",
     tomorrow: "Tomorrow",
     no_forecast_data: "No forecast data available. Check entity or logs.",
@@ -213,6 +219,12 @@ const translations = {
     hourly_forecast: "Pronóstico horario",
     daily: "Diario",
     hourly: "Horario",
+    forecast_trend: "Tendencia de la previsión",
+    chart_temperature: "Temperatura",
+    chart_max: "Máx",
+    chart_min: "Mín",
+    chart_rain: "Lluvia",
+    chart_rain_max: "máx. {value} mm",
     today: "Hoy",
     tomorrow: "Mañana",
     no_forecast_data: "No hay datos de pronóstico disponibles. Verifica la entidad o los registros.",
@@ -393,6 +405,12 @@ const translations = {
     hourly_forecast: "Previsió horària",
     daily: "Diari",
     hourly: "Horari",
+    forecast_trend: "Tendència de la previsió",
+    chart_temperature: "Temperatura",
+    chart_max: "Màx",
+    chart_min: "Mín",
+    chart_rain: "Pluja",
+    chart_rain_max: "màx. {value} mm",
     today: "Avui",
     tomorrow: "Demà",
     no_forecast_data: "No hi ha dades de previsió disponibles. Comprova l'entitat o els registres.",
@@ -571,6 +589,9 @@ const MARKETPLACE_ICON_PATH = "/local/community/meteocat-card/";
 const MANUAL_ICON_PATH = "/local/meteocat-card/icons/";
 const LEGACY_HACS_ICON_PREFIX = "/hacsfiles/meteocat-card";
 const MARKETPLACE_ICON_PREFIX = "/local/community/meteocat-card";
+const FORECAST_ITEM_WIDTH = 108;
+const FORECAST_ITEM_CENTER = 50;
+const FORECAST_CHART_HEIGHT = 150;
 
 function normalizeIconPathType(type) {
   return type === "manual" ? "manual" : "marketplace";
@@ -650,6 +671,7 @@ class MeteocatCard extends HTMLElement {
       option_show_moon_info: true,
       option_show_moon_times: true,
       option_show_eto: true,
+      option_show_chart: false,
     };
   }
 
@@ -667,6 +689,7 @@ class MeteocatCard extends HTMLElement {
       option_show_moon_info: true,
       option_show_moon_times: true,
       option_show_eto: true,
+      option_show_chart: false,
       ...config,
       title: undefined,
       sunrise_entity: undefined,
@@ -695,6 +718,12 @@ class MeteocatCard extends HTMLElement {
     this._hass = hass;
     this._discoverEntities();
     this._update();
+  }
+
+  connectedCallback() {
+    if (this._hass && this._config) {
+      this._update();
+    }
   }
 
   async _discoverEntities() {
@@ -964,6 +993,169 @@ class MeteocatCard extends HTMLElement {
     return new Date(timestamp).toLocaleTimeString(this._hass?.language || "es-ES", { hour: "2-digit", minute: "2-digit" });
   }
 
+  _toFiniteNumber(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  _isCardPickerPreview() {
+    const root = this.getRootNode?.();
+    return root?.host?.localName === "hui-card-picker";
+  }
+
+  _buildForecastChart(type, forecasts) {
+    if ((!this._config?.option_show_chart && !this._isCardPickerPreview()) || !Array.isArray(forecasts) || forecasts.length < 2) {
+      return "";
+    }
+
+    const isDaily = type === "daily";
+    const width = forecasts.length * FORECAST_ITEM_WIDTH;
+    const height = FORECAST_CHART_HEIGHT + (isDaily ? 0 : 26);
+    const plotTop = 10;
+    const xLabelY = height - 5;
+    const rainLaneHeight = isDaily ? 0 : 24;
+    const rainLaneBottom = isDaily ? 0 : xLabelY - 10;
+    const rainLaneTop = rainLaneBottom - rainLaneHeight;
+    const plotBottom = isDaily ? height - 22 : rainLaneTop - 16;
+    const plotHeight = plotBottom - plotTop;
+
+    const points = forecasts.map((forecast, index) => ({
+      x: index * FORECAST_ITEM_WIDTH + FORECAST_ITEM_CENTER,
+      label: isDaily
+        ? this._formatForecastDate(forecast.datetime)
+        : this._formatForecastHour(forecast.datetime),
+      temp: this._toFiniteNumber(forecast.temperature),
+      templow: isDaily ? this._toFiniteNumber(forecast.templow) : null,
+      precip: isDaily ? null : this._toFiniteNumber(forecast.precipitation),
+    }));
+
+    const tempValues = [];
+    for (const point of points) {
+      if (point.temp !== null) tempValues.push(point.temp);
+      if (point.templow !== null) tempValues.push(point.templow);
+    }
+    if (tempValues.length < 2) return "";
+
+    const rawMin = Math.min(...tempValues);
+    const rawMax = Math.max(...tempValues);
+    const span = rawMax - rawMin || 1;
+    const padding = Math.max(span * 0.15, 1);
+    const scaleMin = rawMin - padding;
+    const scaleMax = rawMax + padding;
+    const scaleSpan = scaleMax - scaleMin;
+    const yForTemp = (value) => plotBottom - ((value - scaleMin) / scaleSpan) * plotHeight;
+
+    const precipValues = points
+      .map((point) => point.precip)
+      .filter((value) => value !== null);
+    const maxPrecip = precipValues.length ? Math.max(...precipValues, 0) : 0;
+    const barMaxHeight = isDaily ? 0 : rainLaneHeight;
+
+    const ticks = [
+      { value: scaleMax, y: plotTop },
+      { value: (scaleMax + scaleMin) / 2, y: plotTop + plotHeight / 2 },
+      { value: scaleMin, y: plotBottom },
+    ];
+
+    const grid = ticks
+      .map((tick) => `<line x1="0" y1="${tick.y.toFixed(1)}" x2="${width}" y2="${tick.y.toFixed(1)}" class="chart-grid-line"></line>`)
+      .join("");
+
+    const barWidth = FORECAST_ITEM_WIDTH;
+    const bars = !isDaily && maxPrecip > 0
+      ? points
+          .map((point, index) => {
+            if (point.precip === null) return "";
+            const barHeight = (point.precip / maxPrecip) * barMaxHeight;
+            if (barHeight <= 0) return "";
+            const x = index * FORECAST_ITEM_WIDTH;
+            const barTop = rainLaneBottom - barHeight;
+            const radius = Math.min(3, barHeight / 2);
+            const path = `M${x.toFixed(1)} ${rainLaneBottom.toFixed(1)} V${(barTop + radius).toFixed(1)} Q${x.toFixed(1)} ${barTop.toFixed(1)} ${(x + radius).toFixed(1)} ${barTop.toFixed(1)} H${(x + barWidth - radius).toFixed(1)} Q${(x + barWidth).toFixed(1)} ${barTop.toFixed(1)} ${(x + barWidth).toFixed(1)} ${(barTop + radius).toFixed(1)} V${rainLaneBottom.toFixed(1)} Z`;
+            return `<path d="${path}" class="chart-rain-bar"></path>`;
+          })
+          .join("")
+      : "";
+
+    const rainBadgeWidth = 52;
+    const rainBadgeHeight = 15;
+    const rainBadgeY = rainLaneBottom - rainBadgeHeight;
+    const rainBadges = !isDaily && maxPrecip > 0
+      ? points
+          .map((point) => {
+            if (point.precip === null || point.precip <= 0) return "";
+            return `<g class="chart-rain-value"><rect x="${(point.x - rainBadgeWidth / 2).toFixed(1)}" y="${rainBadgeY.toFixed(1)}" width="${rainBadgeWidth}" height="${rainBadgeHeight}" rx="4" class="chart-rain-value-bg"></rect><text x="${point.x.toFixed(1)}" y="${(rainBadgeY + rainBadgeHeight / 2).toFixed(1)}" text-anchor="middle" dominant-baseline="central" class="chart-rain-value-label">${this._formatNumber(point.precip, 1)} mm</text></g>`;
+          })
+          .join("")
+      : "";
+
+    const tempPoints = points.filter((point) => point.temp !== null);
+    const lowPoints = isDaily ? points.filter((point) => point.templow !== null) : [];
+
+    const tempLine = tempPoints.length > 1
+      ? `<polyline points="${tempPoints.map((point) => `${point.x.toFixed(1)},${yForTemp(point.temp).toFixed(1)}`).join(" ")}" class="chart-temp-line"></polyline>`
+      : "";
+
+    const lowLine = lowPoints.length > 1
+      ? `<polyline points="${lowPoints.map((point) => `${point.x.toFixed(1)},${yForTemp(point.templow).toFixed(1)}`).join(" ")}" class="chart-temp-low-line"></polyline>`
+      : "";
+
+    const band = isDaily && tempPoints.length > 1 && lowPoints.length > 1
+      ? `<polygon points="${tempPoints.map((point) => `${point.x.toFixed(1)},${yForTemp(point.temp).toFixed(1)}`).join(" ")} ${lowPoints.slice().reverse().map((point) => `${point.x.toFixed(1)},${yForTemp(point.templow).toFixed(1)}`).join(" ")}" class="chart-temp-band"></polygon>`
+      : "";
+
+    const badgeRadius = 13;
+    const badgeY = (value) => Math.max(badgeRadius + 1, Math.min(plotBottom, yForTemp(value)));
+    const valueBadge = (point, value, className) => {
+      const cy = badgeY(value);
+      return `<g class="chart-value ${className}"><circle cx="${point.x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${badgeRadius}" class="chart-value-circle"></circle><text x="${point.x.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" class="chart-value-label">${this._formatNumber(value, 1)}°</text></g>`;
+    };
+    const valueBadges = [
+      ...tempPoints.map((point) => valueBadge(point, point.temp, "chart-value-max")),
+      ...lowPoints.map((point) => valueBadge(point, point.templow, "chart-value-min")),
+    ].join("");
+
+    const labels = points
+      .map((point) => `<text x="${point.x.toFixed(1)}" y="${xLabelY}" text-anchor="middle" class="chart-x-label">${point.label}</text>`)
+      .join("");
+
+    const axisLabels = ticks
+      .map((tick) => `<span style="top:${((tick.y / height) * 100).toFixed(2)}%">${Math.round(tick.value)}</span>`)
+      .join("");
+
+    const legend = isDaily
+      ? `<span class="chart-legend-item"><span class="chart-legend-line chart-legend-max"></span>${getTranslation(this._hass, "chart_max")}</span><span class="chart-legend-item"><span class="chart-legend-line chart-legend-min"></span>${getTranslation(this._hass, "chart_min")}</span>`
+      : `<span class="chart-legend-item"><span class="chart-legend-line chart-legend-temp"></span>${getTranslation(this._hass, "chart_temperature")}</span>${maxPrecip > 0 ? `<span class="chart-legend-item"><span class="chart-legend-bar"></span>${getTranslation(this._hass, "chart_rain")} (${getTranslation(this._hass, "chart_rain_max", { value: this._formatNumber(maxPrecip) })})</span>` : ""}`;
+
+    const viewportWidth = this.visibleItems * FORECAST_ITEM_WIDTH - 8;
+    return `
+      <div class="chart-block">
+        <div class="chart-header">
+          <span class="chart-title">${getTranslation(this._hass, "forecast_trend")}</span>
+          <span class="chart-legend">${legend}</span>
+        </div>
+        <div class="chart-body">
+          <div class="chart-viewport" style="width:${viewportWidth}px;">
+            <div class="chart-track" style="width:${width}px;">
+              <svg class="forecast-chart" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${getTranslation(this._hass, "forecast_trend")}">
+                ${grid}
+                ${bars}
+                ${band}
+                ${lowLine}
+                ${tempLine}
+                ${rainBadges}
+                ${valueBadges}
+                ${labels}
+              </svg>
+            </div>
+          </div>
+          <div class="chart-y-axis" style="height:${height}px;">${axisLabels}</div>
+        </div>
+      </div>
+    `;
+  }
+
   _toggleForecast(type) {
     if (this._currentForecast === type) return;
     const section = this.shadowRoot.querySelector('.forecast-section');
@@ -1219,6 +1411,10 @@ class MeteocatCard extends HTMLElement {
 
       this._dailyForecasts = await this._fetchForecasts("daily");
       this._hourlyForecasts = await this._fetchForecasts("hourly");
+      const chartHtml = this._buildForecastChart(
+        this._currentForecast,
+        this._currentForecast === "daily" ? this._dailyForecasts : this._hourlyForecasts
+      );
 
       let forecastHtml = `
         <div class="forecast-toggle">
@@ -1256,6 +1452,7 @@ class MeteocatCard extends HTMLElement {
                   }).join("")}
                 </div>
               </div>
+              ${chartHtml}
               <div class="slider-bar">
                 <div class="slider-bg"></div>
               </div>
@@ -1292,6 +1489,7 @@ class MeteocatCard extends HTMLElement {
                   }).join("")}
                 </div>
               </div>
+              ${chartHtml}
               <div class="slider-bar">
                 <div class="slider-bg"></div>
               </div>
@@ -1496,11 +1694,38 @@ class MeteocatCard extends HTMLElement {
             .toggle-btn.active { background-color: var(--primary-color); color: white; }
             .forecast-section { padding: 8px 20px; opacity: 1; transition: opacity ${this._fadeDuration}s ease-in-out; }
             .forecast-title { font-size: 1.1em; font-weight: 500; margin-bottom: 4px; font-family: sans-serif; }
+            .chart-block { --mc-chart-max: var(--warning-color, #ef6c00); --mc-chart-min: var(--info-color, #1e88e5); --mc-chart-temp: var(--warning-color, #ef6c00); --mc-chart-rain: var(--primary-color, #2196f3); margin: 4px 0 6px; }
+            .chart-header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-bottom: 4px; font-family: sans-serif; }
+            .chart-title { font-size: 0.95em; font-weight: 500; }
+            .chart-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--secondary-text-color); font-size: 0.78em; }
+            .chart-legend-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+            .chart-legend-line { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
+            .chart-legend-max, .chart-legend-temp { background: var(--mc-chart-max); }
+            .chart-legend-min { background: var(--mc-chart-min); }
+            .chart-legend-bar { display: inline-block; width: 8px; height: 10px; border-radius: 1px; background: var(--mc-chart-rain); opacity: 0.5; }
+            .chart-body { position: relative; }
+            .chart-viewport { overflow: hidden; max-width: 100%; }
+            .chart-track { transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); will-change: transform; }
+            .forecast-chart { display: block; overflow: visible; }
+            .chart-grid-line { stroke: var(--divider-color, rgba(127, 127, 127, 0.2)); stroke-width: 1; }
+            .chart-x-label { fill: var(--secondary-text-color, #727272); font-size: 10px; font-family: sans-serif; }
+            .chart-temp-line { fill: none; stroke: var(--mc-chart-max); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+            .chart-temp-low-line { fill: none; stroke: var(--mc-chart-min); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+            .chart-temp-band { fill: var(--mc-chart-max); opacity: 0.12; }
+            .chart-value-circle { fill: var(--ha-card-background, var(--card-background-color, #fff)); stroke: var(--mc-chart-max); stroke-width: 1.5; }
+            .chart-value-label { fill: var(--mc-chart-max); font-size: 9px; font-weight: 600; font-family: sans-serif; }
+            .chart-value-min .chart-value-circle { stroke: var(--mc-chart-min); }
+            .chart-value-min .chart-value-label { fill: var(--mc-chart-min); }
+            .chart-rain-bar { fill: var(--mc-chart-rain); opacity: 0.28; }
+            .chart-rain-value-bg { fill: var(--ha-card-background, var(--card-background-color, #fff)); stroke: var(--mc-chart-rain); stroke-width: 1; }
+            .chart-rain-value-label { fill: var(--mc-chart-rain); font-size: 8.5px; font-weight: 600; font-family: sans-serif; }
+            .chart-y-axis { position: absolute; left: 0; top: 0; width: 36px; pointer-events: none; font-family: sans-serif; }
+            .chart-y-axis span { position: absolute; left: 0; transform: translateY(-50%); padding: 0 2px; border-radius: 2px; background: var(--ha-card-background, var(--card-background-color, transparent)); color: var(--secondary-text-color, #727272); font-size: 10px; line-height: 1; }
             .forecast-slider { position: relative; }
-            .slider-container { overflow: hidden; cursor: grab; user-select: none; }
+            .slider-container { overflow: hidden; cursor: grab; user-select: none; max-width: 100%; }
             .slider-container.dragging { cursor: grabbing; }
             .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); }
-            .forecast-item { display: flex; flex-direction: column; align-items: center; padding: 2px; min-width: 100px; margin-right: 8px; }
+            .forecast-item { display: flex; flex-direction: column; align-items: center; padding: 2px; width: 100px; min-width: 100px; flex: 0 0 100px; margin-right: 8px; box-sizing: border-box; }
             .forecast-icon { width: 48px; height: 48px; }
             .forecast-day, .forecast-hour { font-weight: 500; font-family: sans-serif; }
             .forecast-temp { font-size: 0.9em; font-family: sans-serif; }
@@ -1584,26 +1809,36 @@ class MeteocatCard extends HTMLElement {
     const sliderTrack = this.shadowRoot.querySelector('.slider-track');
     const sliderBar = this.shadowRoot.querySelector('.slider-bar');
     const sliderContainer = this.shadowRoot.querySelector('.slider-container');
+    const chartTrack = this.shadowRoot.querySelector('.chart-track');
 
     if (!sliderTrack || !sliderBar || !sliderContainer) return;
 
-    const itemWidth = 108; // 100px width + 8px margin-right
+    const itemWidth = FORECAST_ITEM_WIDTH;
     const totalItems = this._currentForecast === 'daily' ? this._dailyForecasts.length : this._hourlyForecasts.length;
     const maxSlides = Math.max(0, totalItems - this.visibleItems);
     const maxTranslate = maxSlides * itemWidth;
 
+    const setTrackTranslate = (translateX, animate) => {
+      const transition = animate ? 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none';
+      sliderTrack.style.transition = transition;
+      sliderTrack.style.transform = `translateX(${translateX}px)`;
+      if (chartTrack) {
+        chartTrack.style.transition = transition;
+        chartTrack.style.transform = `translateX(${translateX}px)`;
+      }
+    };
+
     const updateSliderPosition = (percentage, animate = true) => {
       if (totalItems <= this.visibleItems) {
         this._sliderValue = 0;
-        sliderTrack.style.transform = `translateX(0px)`;
+        setTrackTranslate(0, false);
         sliderBar.style.setProperty('--slider-value', `0%`);
         return;
       }
       this._sliderValue = Math.max(0, Math.min(100, percentage));
       const translateX = (this._sliderValue / 100) * maxTranslate;
       this._currentSlide = Math.round(translateX / itemWidth);
-      sliderTrack.style.transition = animate ? 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none';
-      sliderTrack.style.transform = `translateX(-${translateX}px)`;
+      setTrackTranslate(-translateX, animate);
       sliderBar.style.setProperty('--slider-value', `${this._sliderValue}%`);
       if (animate) {
         const onTransitionEnd = () => {
@@ -1672,8 +1907,7 @@ class MeteocatCard extends HTMLElement {
       const delta = event.clientX - containerStartX;
       let newTranslate = containerStartTranslate + delta;
       newTranslate = Math.min(0, Math.max(-maxTranslate, newTranslate));
-      sliderTrack.style.transition = 'none';
-      sliderTrack.style.transform = `translateX(${newTranslate}px)`;
+      setTrackTranslate(newTranslate, false);
       const percentage = (-newTranslate / maxTranslate) * 100;
       sliderBar.style.setProperty('--slider-value', `${percentage}%`);
       this._sliderValue = percentage;

@@ -185,6 +185,7 @@ s-rainy-night.svg
    option_show_sun_times: true
    option_show_moon_info: true
    option_show_moon_times: true
+   option_show_chart: false
    debug: false
    fade_duration: 0.3
    ```
@@ -213,6 +214,7 @@ s-rainy-night.svg
       option_show_sun_times: true
       option_show_moon_info: true
       option_show_moon_times: true
+      option_show_chart: false
       debug: false
       fade_duration: 0.3
       ```
@@ -231,6 +233,7 @@ s-rainy-night.svg
 | `entity`                 | string  | —                                 | **Required.** Your Meteocat weather entity.                |
 | `default_forecast_view`  | boolean | `daily`                           | Use daily view (`daily`) or hourly view (`hourly`).        |
 | `option_static_icons`    | boolean | `false`                           | Use static icons (`true`) or animated icons (`false`).     |
+| `option_show_chart`      | boolean | `false`                           | Use `true` to show the forecast trend chart.               |
 | `icon_path_type`         | string  | `marketplace`                     | Use `marketplace` or `manual` according to your installation. Legacy `hacs` is migrated automatically. |
 | `iconPath`               | string  | `/local/community/meteocat-card/` | Path to the folder containing the SVG icons.          |
 | `option_show_sun_info`   | boolean | `true`                            | Use `false` to disable sun info sensors.                   |
@@ -239,6 +242,13 @@ s-rainy-night.svg
 | `option_show_moon_times` | boolean | `true`                            | Use `false` to disable moonrise and moonset sensors.       |
 | `debug`                  | boolean | `false`                           | Use `true` to enable debug.                                |
 | `fade_duration`          | float   | `0.3`                             | Value between `0.0` and `1.0` for transition daily/hourly. |
+
+### Forecast trend chart
+
+Set `option_show_chart: true` to display a trend chart below the forecast cards and above the slider. The chart follows the selected forecast view and moves together with the forecast cards, keeping 4 items visible on desktop and 3 on mobile.
+
+- **Daily view:** maximum and minimum temperature lines.
+- **Hourly view:** temperature line and precipitation bars in mm for the next 72 hours.
 
 ## Notes
 
@@ -261,6 +271,7 @@ option_show_sun_info: true
 option_show_sun_times: true
 option_show_moon_info: true
 option_show_moon_times: true
+option_show_chart: false
 debug: false
 fade_duration: 0.3
 ```
