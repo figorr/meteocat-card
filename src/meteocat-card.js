@@ -1765,6 +1765,17 @@ class MeteocatCard extends HTMLElement {
             .alert-attr-name { font-weight: bold; }
             .alert-attr-value { }
             .attribution { text-align: center; font-size: 0.8em; color: var(--secondary-text-color); padding: 8px 20px; font-family: sans-serif; }
+            :host(.narrow) .header { font-size: 1.45em; margin: 8px 12px 0; }
+            :host(.narrow) .town-name, :host(.narrow) .station-timestamp { margin-left: 12px; margin-right: 12px; }
+            :host(.narrow) .current { padding: 0 8px 2px; gap: 4px; }
+            :host(.narrow) .current-left { gap: 4px; min-width: 0; }
+            :host(.narrow) .current-left img { width: 64px; height: 64px; }
+            :host(.narrow) .current-condition { font-size: 1.2em; }
+            :host(.narrow) .current-temp { font-size: 1.9em; }
+            :host(.narrow) .current-feels { font-size: 0.8em; margin-top: 0; }
+            :host(.narrow) .details { padding: 6px 12px 8px; font-size: 0.9em; }
+            :host(.narrow) .forecast-toggle, :host(.narrow) .alerts-section, :host(.narrow) .attribution { padding-left: 12px; padding-right: 12px; }
+            :host(.narrow) .forecast-section { padding: 8px 12px; }
           </style>
 
           <div class="header">Meteocat</div>
@@ -1797,6 +1808,7 @@ class MeteocatCard extends HTMLElement {
       const sliderTrack = this.shadowRoot.querySelector('.slider-track');
       const sliderBar = this.shadowRoot.querySelector('.slider-bar');
       const sliderContainer = this.shadowRoot.querySelector('.slider-container');
+      const chartViewport = this.shadowRoot.querySelector('.chart-viewport');
       const card = this.shadowRoot.querySelector('ha-card');
 
       if (dailyBtn) dailyBtn.addEventListener('click', () => this._toggleForecast('daily'));
@@ -1807,9 +1819,14 @@ class MeteocatCard extends HTMLElement {
       }
       this.resizeObserver = new ResizeObserver((entries) => {
         const cardWidth = entries[0].contentRect.width;
-        this.visibleItems = cardWidth < 400 ? 3 : 4;
+        this.classList.toggle("narrow", cardWidth < 464);
+        this.visibleItems = cardWidth >= 448 ? 4 : cardWidth >= 340 ? 3 : cardWidth >= 232 ? 2 : 1;
+        const visibleWidth = `calc(100px * ${this.visibleItems} + ${8 * (this.visibleItems - 1)}px)`;
         if (sliderContainer) {
-          sliderContainer.style.width = `calc(100px * ${this.visibleItems} + ${8 * (this.visibleItems - 1)}px)`;
+          sliderContainer.style.width = visibleWidth;
+        }
+        if (chartViewport) {
+          chartViewport.style.width = visibleWidth;
         }
         this._setupSlider();
       });
