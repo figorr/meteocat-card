@@ -186,6 +186,7 @@ s-rainy-night.svg
    option_show_moon_info: true
    option_show_moon_times: true
    option_show_chart: false
+   option_detail_tap_more_info: true
    debug: false
    fade_duration: 0.3
    ```
@@ -234,6 +235,7 @@ s-rainy-night.svg
 | `default_forecast_view`  | boolean | `daily`                           | Use daily view (`daily`) or hourly view (`hourly`).        |
 | `option_static_icons`    | boolean | `false`                           | Use static icons (`true`) or animated icons (`false`).     |
 | `option_show_chart`      | boolean | `false`                           | Use `true` to show the forecast trend chart.               |
+| `option_detail_tap_more_info` | boolean | `true`                         | Use `false` to disable opening the entity more-info dialog from current metrics, temperature, and feels-like. |
 | `icon_path_type`         | string  | `marketplace`                     | Use `marketplace` or `manual` according to your installation. Legacy `hacs` is migrated automatically. |
 | `iconPath`               | string  | `/local/community/meteocat-card/` | Path to the folder containing the SVG icons.          |
 | `option_show_sun_info`   | boolean | `true`                            | Use `false` to disable sun info sensors.                   |
@@ -242,6 +244,10 @@ s-rainy-night.svg
 | `option_show_moon_times` | boolean | `true`                            | Use `false` to disable moonrise and moonset sensors.       |
 | `debug`                  | boolean | `false`                           | Use `true` to enable debug.                                |
 | `fade_duration`          | float   | `0.3`                             | Value between `0.0` and `1.0` for transition daily/hourly. |
+
+### Clickable current details
+
+With `option_detail_tap_more_info: true` (default), current metrics, temperature, and feels-like are clickable when they have a dedicated entity configured or discovered. Clicking, or pressing Enter/Space, opens Home Assistant's more-info dialog for that entity. Values read from weather attributes without their own entity are not marked as clickable.
 
 ### Forecast trend chart
 

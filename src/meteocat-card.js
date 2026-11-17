@@ -639,6 +639,8 @@ class MeteocatCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._content = document.createElement("div");
     this.shadowRoot.appendChild(this._content);
+    this._content.addEventListener("click", (event) => this._handleMoreInfoClick(event));
+    this._content.addEventListener("keydown", (event) => this._handleMoreInfoKeyDown(event));
     this.iconPath = MARKETPLACE_ICON_PATH;
     this.useStaticIcons = false;
     this._currentForecast = "daily";
@@ -666,6 +668,54 @@ class MeteocatCard extends HTMLElement {
     }
   }
 
+  _getMoreInfoEntity(...entityIds) {
+    if (this._config?.option_detail_tap_more_info === false) return null;
+    for (const entityId of entityIds) {
+      if (!entityId || typeof entityId !== "string" || entityId.startsWith("weather.")) continue;
+      const state = this._hass?.states?.[entityId];
+      if (state && state.state !== "unavailable") return entityId;
+    }
+    return null;
+  }
+
+  _getMoreInfoAttributes(entityId) {
+    return entityId
+      ? ` data-entity="${entityId}" role="button" tabindex="0"`
+      : "";
+  }
+
+  _renderDetail(entityId, icon, content) {
+    const actionClass = entityId ? " more-info-action" : "";
+    return `<div class="detail${actionClass}"${this._getMoreInfoAttributes(entityId)}><ha-icon icon="${icon}"></ha-icon>${content}</div>`;
+  }
+
+  _openMoreInfo(entityId) {
+    if (!entityId || this._config?.option_detail_tap_more_info === false) return;
+    if (!this._hass?.states?.[entityId]) return;
+    this.dispatchEvent(new CustomEvent("hass-more-info", {
+      detail: { entityId },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  _handleMoreInfoClick(event) {
+    const action = event.target.closest?.(".more-info-action");
+    if (!action) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this._openMoreInfo(action.dataset.entity);
+  }
+
+  _handleMoreInfoKeyDown(event) {
+    if (event.repeat || (event.key !== "Enter" && event.key !== " ")) return;
+    const action = event.target.closest?.(".more-info-action");
+    if (!action) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this._openMoreInfo(action.dataset.entity);
+  }
+
   static getConfigElement() {
     return document.createElement("meteocat-card-editor");
   }
@@ -691,6 +741,7 @@ class MeteocatCard extends HTMLElement {
       option_show_moon_times: true,
       option_show_eto: true,
       option_show_chart: false,
+      option_detail_tap_more_info: true,
     };
   }
 
@@ -709,6 +760,7 @@ class MeteocatCard extends HTMLElement {
       option_show_moon_times: true,
       option_show_eto: true,
       option_show_chart: false,
+      option_detail_tap_more_info: true,
       ...config,
       title: undefined,
       sunrise_entity: undefined,
@@ -1614,37 +1666,46 @@ class MeteocatCard extends HTMLElement {
       const sunriseTs = sunrise?.state ? new Date(sunrise.state).getTime() : null;
       const sunsetTs = sunset?.state ? new Date(sunset.state).getTime() : null;
 
+      const sunriseInfo = this._getMoreInfoEntity(this._config.sunrise_entity);
+      const sunsetInfo = this._getMoreInfoEntity(this._config.sunset_entity);
+      const sunriseDetail = this._renderDetail(sunriseInfo, "mdi:weather-sunset-up", getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) }));
+      const sunsetDetail = this._renderDetail(sunsetInfo, "mdi:weather-sunset-down", getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) }));
+
       let sunFirst = '';
       let sunSecond = '';
       if (sunriseTs !== null && sunsetTs !== null) {
         if (sunriseTs < sunsetTs) {
-          sunFirst = `<div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>`;
-          sunSecond = `<div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>`;
+          sunFirst = sunriseDetail;
+          sunSecond = sunsetDetail;
         } else {
-          sunFirst = `<div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>`;
-          sunSecond = `<div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>`;
+          sunFirst = sunsetDetail;
+          sunSecond = sunriseDetail;
         }
       } else {
-        sunFirst = `<div class="detail"><ha-icon icon="mdi:weather-sunset-up"></ha-icon>${getTranslation(this._hass, 'sunrise', { value: this._formatTimestamp(sunrise?.state) })}</div>`;
-        sunSecond = `<div class="detail"><ha-icon icon="mdi:weather-sunset-down"></ha-icon>${getTranslation(this._hass, 'sunset', { value: this._formatTimestamp(sunset?.state) })}</div>`;
+        sunFirst = sunriseDetail;
+        sunSecond = sunsetDetail;
       }
 
       const moonriseTs = moonrise?.state ? new Date(moonrise.state).getTime() : null;
       const moonsetTs = moonset?.state ? new Date(moonset.state).getTime() : null;
+      const moonriseInfo = this._getMoreInfoEntity(this._config.moonrise_entity);
+      const moonsetInfo = this._getMoreInfoEntity(this._config.moonset_entity);
+      const moonriseDetail = this._renderDetail(moonriseInfo, "mdi:weather-moonset-up", getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) }));
+      const moonsetDetail = this._renderDetail(moonsetInfo, "mdi:weather-moonset-down", getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) }));
 
       let moonFirst = '';
       let moonSecond = '';
       if (moonriseTs !== null && moonsetTs !== null) {
         if (moonriseTs < moonsetTs) {
-          moonFirst = `<div class="detail"><ha-icon icon="mdi:weather-moonset-up"></ha-icon>${getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) })}</div>`;
-          moonSecond = `<div class="detail"><ha-icon icon="mdi:weather-moonset-down"></ha-icon>${getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) })}</div>`;
+          moonFirst = moonriseDetail;
+          moonSecond = moonsetDetail;
         } else {
-          moonFirst = `<div class="detail"><ha-icon icon="mdi:weather-moonset-down"></ha-icon>${getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) })}</div>`;
-          moonSecond = `<div class="detail"><ha-icon icon="mdi:weather-moonset-up"></ha-icon>${getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) })}</div>`;
+          moonFirst = moonsetDetail;
+          moonSecond = moonriseDetail;
         }
       } else {
-        moonFirst = `<div class="detail"><ha-icon icon="mdi:weather-moonset-down"></ha-icon>${getTranslation(this._hass, 'moonset', { value: this._formatTimestamp(moonset?.state) })}</div>`;
-        moonSecond = `<div class="detail"><ha-icon icon="mdi:weather-moonset-up"></ha-icon>${getTranslation(this._hass, 'moonrise', { value: this._formatTimestamp(moonrise?.state) })}</div>`;
+        moonFirst = moonsetDetail;
+        moonSecond = moonriseDetail;
       }
 
       const precipitationValue = precipitation?.state ?? entity.attributes?.precipitation ?? "-";
@@ -1657,38 +1718,53 @@ class MeteocatCard extends HTMLElement {
           ? `${this._formatNumber(precipitationValue)} mm${precipitationIntensityValue}`
           : "-";
 
+      const maxTempInfo = this._getMoreInfoEntity(this._config.forecast_max_entity);
+      const minTempInfo = this._getMoreInfoEntity(this._config.forecast_min_entity);
+      const humidityInfo = this._getMoreInfoEntity(this._config.humidity_entity);
+      const windInfo = this._getMoreInfoEntity(this._config.wind_speed_entity, this._config.wind_gust_speed_entity);
+      const precipitationProbabilityInfo = this._getMoreInfoEntity(this._config.precipitation_probability_entity);
+      const precipitationInfo = this._getMoreInfoEntity(this._config.precipitation_entity);
+      const pressureInfo = this._getMoreInfoEntity(this._config.pressure_entity);
+      const lightningInfo = this._getMoreInfoEntity(this._config.lightning_town_entity, this._config.lightning_region_entity);
+      const uvIndexInfo = this._getMoreInfoEntity(this._config.uv_index_entity);
+      const solarInfo = this._getMoreInfoEntity(this._config.solar_global_irradiance_entity);
+      const etoHourlyInfo = this._getMoreInfoEntity(this._config.eto_hourly_entity);
+      const etoDailyInfo = this._getMoreInfoEntity(this._config.eto_daily_entity);
+      const sunInfo = this._getMoreInfoEntity(this._config.sun_entity);
+      const moonInfo = this._getMoreInfoEntity(this._config.moon_phase_entity);
+
       let detailsHtml = `
         <div class="details">
-          <div class="detail"><ha-icon icon="mdi:thermometer-high"></ha-icon>${getTranslation(this._hass, 'max_temp', { value: this._formatNumber(forecastMax?.state ?? "-") })}</div>
-          <div class="detail"><ha-icon icon="mdi:thermometer-low"></ha-icon>${getTranslation(this._hass, 'min_temp', { value: this._formatNumber(forecastMin?.state ?? "-") })}</div>
-          <div class="detail"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: this._formatNumber(humidity, 0) })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-windy"></ha-icon>${windDisplay}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-pouring"></ha-icon>${getTranslation(this._hass, 'precipitation_probability', { value: this._formatNumber(precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-", 0) })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-rainy"></ha-icon>${getTranslation(this._hass, 'precipitation', { value: precipitationDisplay })}</div>
-          <div class="detail"><ha-icon icon="mdi:gauge"></ha-icon>${getTranslation(this._hass, 'pressure', { value: this._formatNumber(pressure, 0) })}</div>
-          <div class="detail"><ha-icon icon="mdi:flash"></ha-icon>${lightningTown?.state ?? "-"} / ${lightningRegion?.state ?? "-"}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-sunny-alert"></ha-icon>${getTranslation(this._hass, 'uv_index', { value: `UV ${this._formatNumber(uvIndex)}` })}</div>
-          <div class="detail"><ha-icon icon="mdi:sun-wireless-outline"></ha-icon>${getTranslation(this._hass, 'solar_global_irradiance', { value: this._formatNumber(solarGlobalIrradiance, 0) })}</div>
+          ${this._renderDetail(maxTempInfo, "mdi:thermometer-high", getTranslation(this._hass, 'max_temp', { value: this._formatNumber(forecastMax?.state ?? "-") }))}
+          ${this._renderDetail(minTempInfo, "mdi:thermometer-low", getTranslation(this._hass, 'min_temp', { value: this._formatNumber(forecastMin?.state ?? "-") }))}
+          ${this._renderDetail(humidityInfo, "mdi:water-percent", getTranslation(this._hass, 'humidity', { value: this._formatNumber(humidity, 0) }))}
+          ${this._renderDetail(windInfo, "mdi:weather-windy", windDisplay)}
+          ${this._renderDetail(precipitationProbabilityInfo, "mdi:weather-pouring", getTranslation(this._hass, 'precipitation_probability', { value: this._formatNumber(precipitationProbability?.state ?? entity.attributes?.precipitation_probability ?? "-", 0) }))}
+          ${this._renderDetail(precipitationInfo, "mdi:weather-rainy", getTranslation(this._hass, 'precipitation', { value: precipitationDisplay }))}
+          ${this._renderDetail(pressureInfo, "mdi:gauge", getTranslation(this._hass, 'pressure', { value: this._formatNumber(pressure, 0) }))}
+          ${this._renderDetail(lightningInfo, "mdi:flash", `${lightningTown?.state ?? "-"} / ${lightningRegion?.state ?? "-"}`)}
+          ${this._renderDetail(uvIndexInfo, "mdi:weather-sunny-alert", getTranslation(this._hass, 'uv_index', { value: `UV ${this._formatNumber(uvIndex)}` }))}
+          ${this._renderDetail(solarInfo, "mdi:sun-wireless-outline", getTranslation(this._hass, 'solar_global_irradiance', { value: this._formatNumber(solarGlobalIrradiance, 0) }))}
       `;
 
       if (this._config.option_show_eto) {
         detailsHtml += `
-          <div class="detail"><ha-icon icon="mdi:water-outline"></ha-icon>${getTranslation(this._hass, 'eto_hourly', { value: this._formatNumber(etoHourly) })}</div>
-          <div class="detail"><ha-icon icon="mdi:water-outline"></ha-icon>${getTranslation(this._hass, 'eto_daily', { value: this._formatNumber(etoDaily) })}</div>
+          ${this._renderDetail(etoHourlyInfo, "mdi:water-outline", getTranslation(this._hass, 'eto_hourly', { value: this._formatNumber(etoHourly) }))}
+          ${this._renderDetail(etoDailyInfo, "mdi:water-outline", getTranslation(this._hass, 'eto_daily', { value: this._formatNumber(etoDaily) }))}
         `;
       }
 
       if (this._config.option_show_sun_info) {
         detailsHtml += `
-          <div class="detail"><ha-icon icon="mdi:weather-sunny"></ha-icon>${sunState}</div>
-          <div class="detail"><ha-icon icon="mdi:sun-angle-outline"></ha-icon>${getTranslation(this._hass, 'azimuth', { value: this._formatNumber(sunAzimuth, 0) })}</div>
+          ${this._renderDetail(sunInfo, "mdi:weather-sunny", sunState)}
+          ${this._renderDetail(sunInfo, "mdi:sun-angle-outline", getTranslation(this._hass, 'azimuth', { value: this._formatNumber(sunAzimuth, 0) }))}
         `;
       }
 
       if (this._config.option_show_moon_info) {
         detailsHtml += `
-          <div class="detail"><ha-icon icon="${this._getMoonIcon(moonPhase?.state)}"></ha-icon>${getTranslation(this._hass, 'moon_phase', { value: translatedMoonPhase })}</div>
-          <div class="detail"><ha-icon icon="mdi:weather-night"></ha-icon>${getTranslation(this._hass, 'illuminated_percentage', { value: this._formatNumber(moonPhase?.attributes?.illuminated_percentage ?? "-", 0) })}</div>
+          ${this._renderDetail(moonInfo, this._getMoonIcon(moonPhase?.state), getTranslation(this._hass, 'moon_phase', { value: translatedMoonPhase }))}
+          ${this._renderDetail(moonInfo, "mdi:weather-night", getTranslation(this._hass, 'illuminated_percentage', { value: this._formatNumber(moonPhase?.attributes?.illuminated_percentage ?? "-", 0) }))}
         `;
       }
 
@@ -1701,6 +1777,9 @@ class MeteocatCard extends HTMLElement {
       }
 
       detailsHtml += `</div>`;
+
+      const temperatureInfo = this._getMoreInfoEntity(this._config.temperature_entity);
+      const feelsLikeInfo = this._getMoreInfoEntity(this._config.feels_like_entity);
 
       this._content.innerHTML = `
         <ha-card>
@@ -1718,6 +1797,11 @@ class MeteocatCard extends HTMLElement {
             .details { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 2px 12px; padding: 6px 20px 10px; font-size: 1.0em; font-family: sans-serif; }
             .detail { display: flex; align-items: center; gap: 4px; }
             .detail ha-icon { color: var(--secondary-text-color); }
+            .more-info-action { cursor: pointer; border-radius: 6px; user-select: none; transition: background 0.15s ease; }
+            .detail.more-info-action { padding: 2px 4px; margin: -2px -4px; }
+            .current-temp.more-info-action, .current-feels.more-info-action { padding: 0 6px; margin-left: -6px; margin-right: -6px; }
+            .more-info-action:hover, .more-info-action:focus-visible { background: var(--secondary-background-color, rgba(127, 127, 127, 0.15)); }
+            .more-info-action:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
             .forecast-toggle { display: flex; gap: 8px; padding: 8px 20px; }
             .toggle-btn { padding: 4px 8px; border: 1px solid var(--divider-color); background: none; cursor: pointer; border-radius: 4px; font-family: sans-serif; }
             .toggle-btn.active { background-color: var(--primary-color); color: white; }
@@ -1803,8 +1887,8 @@ class MeteocatCard extends HTMLElement {
               <div class="current-condition">${condition}</div>
             </div>
             <div class="current-right">
-              <div class="current-temp">${this._formatNumber(temperature)}°C</div>
-              <div class="current-feels">${getTranslation(this._hass, 'feels_like', { value: this._formatNumber(feelsLike?.state ?? "-") })}</div>
+              <div class="current-temp${temperatureInfo ? " more-info-action" : ""}"${this._getMoreInfoAttributes(temperatureInfo)}>${this._formatNumber(temperature)}°C</div>
+              <div class="current-feels${feelsLikeInfo ? " more-info-action" : ""}"${this._getMoreInfoAttributes(feelsLikeInfo)}>${getTranslation(this._hass, 'feels_like', { value: this._formatNumber(feelsLike?.state ?? "-") })}</div>
             </div>
           </div>
 
