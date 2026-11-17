@@ -633,6 +633,16 @@ function getAlertLevelMeta(hass, danger) {
   };
 }
 
+function getNoAlertMeta(hass) {
+  return {
+    key: "none",
+    color: "#2e7d32",
+    background: "#dff3d8",
+    textColor: "#1f4d1f",
+    label: getTranslation(hass, "no_alerts"),
+  };
+}
+
 // Helper para obtener el array de direcciones cardinales traducidas
 function getCardinalDirections(hass) {
   const lang = hass?.language || 'en';
@@ -1758,14 +1768,24 @@ class MeteocatCard extends HTMLElement {
         alertsHtml = `
           <div class="alerts-section">
             <div class="alerts-title">${getTranslation(this._hass, 'alerts')}</div>
-            <div class="alerts-summary">
         `;
         if (alertCount === 0) {
-          alertsHtml += `<ha-icon icon="mdi:check-circle" style="color: green;"></ha-icon> ${getTranslation(this._hass, 'no_alerts')}`;
+          const noAlertMeta = getNoAlertMeta(this._hass);
+          alertsHtml += `
+            <div class="alerts-badges">
+              <div class="alert-badge alert-badge--none" style="--alert-badge-color: ${noAlertMeta.color}; --alert-badge-bg: ${noAlertMeta.background}; --alert-badge-fg: ${noAlertMeta.textColor};">
+                <ha-icon icon="mdi:check-circle"></ha-icon>
+                <span class="alert-badge-name">${noAlertMeta.label}</span>
+              </div>
+            </div>
+          `;
         } else {
-          alertsHtml += `<ha-icon icon="mdi:alert-circle" style="color: red;"></ha-icon> ${getTranslation(this._hass, 'active_alerts', { count: alertCount })}`;
+          alertsHtml += `
+            <div class="alerts-summary">
+              <ha-icon icon="mdi:alert-circle" style="color: red;"></ha-icon> ${getTranslation(this._hass, 'active_alerts', { count: alertCount })}
+            </div>
+          `;
         }
-        alertsHtml += `</div>`;
 
         if (alertCount > 0 && activeAlerts.length > 0 && this._config.option_show_alert_badges !== false) {
           alertsHtml += `
@@ -1996,6 +2016,8 @@ class MeteocatCard extends HTMLElement {
             .alerts-badges { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
             .alert-badge { display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 7px 10px; appearance: none; -webkit-appearance: none; border: 0; border-left: 4px solid var(--alert-badge-color, #546e7a); border-radius: 6px; background-color: var(--alert-badge-bg, #dfe6e9); color: var(--alert-badge-fg, #1f2a30); font-size: 0.9em; font-family: sans-serif; line-height: 1.35; text-align: left; white-space: normal; cursor: pointer; user-select: none; }
             .alert-badge:hover { filter: brightness(0.97); }
+            .alert-badge--none { cursor: default; }
+            .alert-badge--none:hover { filter: none; }
             .alert-badge:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: 2px; }
             .alert-badge ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; color: var(--alert-badge-color, #ffffff); }
             .alert-badge-name { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow-wrap: break-word; }
