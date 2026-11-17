@@ -236,6 +236,8 @@ s-rainy-night.svg
 | `option_static_icons`    | boolean | `false`                           | Use static icons (`true`) or animated icons (`false`).     |
 | `option_show_chart`      | boolean | `false`                           | Use `true` to show the forecast trend chart.               |
 | `option_detail_tap_more_info` | boolean | `true`                         | Use `false` to disable opening the entity more-info dialog from current metrics, temperature, and feels-like. |
+| `option_show_alert_badges` | boolean | `true`                        | Use `false` to hide the colored SMP danger badges while keeping alert details available. |
+| `option_alert_details_collapsed` | boolean | `true`                  | Use `false` to show alert details expanded by default. |
 | `icon_path_type`         | string  | `marketplace`                     | Use `marketplace` or `manual` according to your installation. Legacy `hacs` is migrated automatically. |
 | `iconPath`               | string  | `/local/community/meteocat-card/` | Path to the folder containing the SVG icons.          |
 | `option_show_sun_info`   | boolean | `true`                            | Use `false` to disable sun info sensors.                   |
@@ -248,6 +250,12 @@ s-rainy-night.svg
 ### Clickable current details
 
 With `option_detail_tap_more_info: true` (default), current metrics, temperature, and feels-like are clickable when they have a dedicated entity configured or discovered. Clicking, or pressing Enter/Space, opens Home Assistant's more-info dialog for that entity. Values read from weather attributes without their own entity are not marked as clickable.
+
+### Alert badges and collapsed details
+
+When Meteocat reports active alerts, the card displays one full-width row for each alert type. Each row uses a warm solid variation of the official SMP danger color based on the `peligro` attribute: moderate (`1-2`, yellow), high (`3-4`, orange), and very high (`5-6`, red). The color is applied to the left border and icon, with a matching light background and high-contrast text. The row also includes the alert type, a text level, and the end time when available, so the severity is not conveyed by color alone and long alert names have room to wrap. Rows are ordered by expiry time, soonest first; if two alerts expire at the same time, the higher danger level is shown first. Clicking or keyboard-activating a row opens the alert details section and scrolls to the matching alert, which is highlighted with the same background color as its badge.
+
+Alert details are shown inside a collapsible section and are collapsed by default. Set `option_alert_details_collapsed: false` to show them expanded initially, or `option_show_alert_badges: false` to hide the colored badges. The expanded/collapsed state is kept while the card refreshes.
 
 ### Forecast trend chart
 

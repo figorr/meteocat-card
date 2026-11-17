@@ -47,6 +47,10 @@ const translations = {
     no_alerts: "No alerts",
     active_alerts: "Active alerts = {count}",
     alerts_details: "Alerts details",
+    alert_level_active: "Active",
+    alert_level_moderate: "Moderate",
+    alert_level_high: "High",
+    alert_level_very_high: "Very high",
     wind_alert: "Wind",
     rain_intensity_alert: "Rain Intensity",
     rain_intensity_alert_30_min: "Rain Intensity 30 min",
@@ -59,6 +63,7 @@ const translations = {
     snow_alert: "Snow",
     inicio: "Start",
     fin: "End",
+    until: "Until {value}",
     fecha: "Date",
     periodo: "Period",
     comentario: "Comment",
@@ -233,6 +238,10 @@ const translations = {
     no_alerts: "Sin alertas",
     active_alerts: "Alertas activas = {count}",
     alerts_details: "Detalles de alertas",
+    alert_level_active: "Activa",
+    alert_level_moderate: "Moderado",
+    alert_level_high: "Alto",
+    alert_level_very_high: "Muy alto",
     wind_alert: "Viento",
     rain_intensity_alert: "Intensidad de lluvia",
     rain_intensity_alert_30_min: "Intensidad de lluvia 30 min",
@@ -245,6 +254,7 @@ const translations = {
     snow_alert: "Nieve",
     inicio: "Inicio",
     fin: "Fin",
+    until: "Hasta {value}",
     fecha: "Fecha",
     periodo: "Período",
     comentario: "Comentario",
@@ -419,6 +429,10 @@ const translations = {
     no_alerts: "Sense alertes",
     active_alerts: "Alertes actives = {count}",
     alerts_details: "Detalls de les alertes",
+    alert_level_active: "Activa",
+    alert_level_moderate: "Moderat",
+    alert_level_high: "Alt",
+    alert_level_very_high: "Molt alt",
     wind_alert: "Vent",
     rain_intensity_alert: "Intensitat de pluja",
     rain_intensity_alert_30_min: "Intensitat de pluja 30 min",
@@ -431,6 +445,7 @@ const translations = {
     snow_alert: "Neu",
     inicio: "Inici",
     fin: "Fi",
+    until: "Fins {value}",
     fecha: "Data",
     periodo: "Període",
     comentario: "Comentari",
@@ -579,6 +594,45 @@ function getThresholdTranslation(hass, alertKey, thresholdValue, fallback = thre
   return thresholdTranslations[thresholdValue] || fallback;
 }
 
+// Helper para obtener el color y la etiqueta de la escala SMP segun el grado de peligro
+function getAlertLevelMeta(hass, danger) {
+  const level = Number.parseInt(danger, 10);
+  if (!Number.isFinite(level) || level <= 0) {
+    return {
+      key: "active",
+      color: "#546e7a",
+      background: "#dfe6e9",
+      textColor: "#34464e",
+      label: getTranslation(hass, "alert_level_active"),
+    };
+  }
+  if (level <= 2) {
+    return {
+      key: "moderate",
+      color: "#8a6d00",
+      background: "#ffe79a",
+      textColor: "#5f4b00",
+      label: getTranslation(hass, "alert_level_moderate"),
+    };
+  }
+  if (level <= 4) {
+    return {
+      key: "high",
+      color: "#b45309",
+      background: "#ffd1a3",
+      textColor: "#6b3b00",
+      label: getTranslation(hass, "alert_level_high"),
+    };
+  }
+  return {
+    key: "very_high",
+    color: "#b71c1c",
+    background: "#ffc9cc",
+    textColor: "#6b1b1b",
+    label: getTranslation(hass, "alert_level_very_high"),
+  };
+}
+
 // Helper para obtener el array de direcciones cardinales traducidas
 function getCardinalDirections(hass) {
   const lang = hass?.language || 'en';
@@ -656,6 +710,7 @@ class MeteocatCard extends HTMLElement {
     this._legacySliderTouchCapture = null;
     this._updateTimeout = null;
     this._updateDebounceDelay = 200; // 0.2 segundos
+    this._alertsExpanded = null;
     this._debug = false; // Modo de depuración desactivado por defecto
     this.visibleItems = 4;
     this.resizeObserver = null;
@@ -697,6 +752,27 @@ class MeteocatCard extends HTMLElement {
       bubbles: true,
       composed: true,
     }));
+  }
+
+  _openAlertDetails(alertKey) {
+    if (!alertKey || !this.shadowRoot) return;
+
+    const details = this.shadowRoot.querySelector('.alerts-details');
+    const target = this.shadowRoot.querySelector(`.alert-detail-item[data-alert-key="${alertKey}"]`);
+    if (!target) return;
+
+    this._alertsExpanded = true;
+    if (details) details.open = true;
+
+    this.shadowRoot.querySelectorAll('.alert-detail-item--highlighted').forEach((item) => {
+      item.classList.remove('alert-detail-item--highlighted');
+    });
+    target.classList.add('alert-detail-item--highlighted');
+
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      target.focus({ preventScroll: true });
+    });
   }
 
   _handleMoreInfoClick(event) {
@@ -742,6 +818,8 @@ class MeteocatCard extends HTMLElement {
       option_show_eto: true,
       option_show_chart: false,
       option_detail_tap_more_info: true,
+      option_show_alert_badges: true,
+      option_alert_details_collapsed: true,
     };
   }
 
@@ -761,6 +839,8 @@ class MeteocatCard extends HTMLElement {
       option_show_eto: true,
       option_show_chart: false,
       option_detail_tap_more_info: true,
+      option_show_alert_badges: true,
+      option_alert_details_collapsed: true,
       ...config,
       title: undefined,
       sunrise_entity: undefined,
@@ -770,6 +850,7 @@ class MeteocatCard extends HTMLElement {
     delete this._config.icons;
     delete this._config.sunrise_entity;
     delete this._config.sunset_entity;
+    this._alertsExpanded = this._config.option_alert_details_collapsed === false;
     this._currentForecast = this._config.default_forecast_view === "hourly" ? "hourly" : "daily";
     this._config.icon_path_type = normalizeIconPathType(
       this._config.icon_path_type
@@ -1586,19 +1667,7 @@ class MeteocatCard extends HTMLElement {
 
       let alertsHtml = '';
       if (alertsEntity) {
-        const alertCount = parseInt(alertsEntity.state ?? 0, 10);
-        alertsHtml = `
-          <div class="alerts-section">
-            <div class="alerts-title">${getTranslation(this._hass, 'alerts')}</div>
-            <div class="alerts-summary">
-        `;
-        if (alertCount === 0) {
-          alertsHtml += `<ha-icon icon="mdi:check-circle" style="color: green;"></ha-icon> ${getTranslation(this._hass, 'no_alerts')}`;
-        } else {
-          alertsHtml += `<ha-icon icon="mdi:alert-circle" style="color: red;"></ha-icon> ${getTranslation(this._hass, 'active_alerts', { count: alertCount })}`;
-        }
-        alertsHtml += `</div>`;
-
+        const alertCount = Number.parseInt(alertsEntity.state ?? 0, 10) || 0;
         const alertKeys = [
           "alert_wind",
           "alert_rain_intensity",
@@ -1623,38 +1692,106 @@ class MeteocatCard extends HTMLElement {
           "alert_warm_night": getTranslation(this._hass, 'warm_night_alert'),
           "alert_snow": getTranslation(this._hass, 'snow_alert')
         };
-        let detailsHtml = '';
+        const alertIconMap = {
+          "alert_wind": "mdi:weather-windy",
+          "alert_rain_intensity": "mdi:weather-pouring",
+          "alert_rain_intensity_30_min": "mdi:weather-pouring",
+          "alert_rain_intensity_3_hours": "mdi:weather-pouring",
+          "alert_rain": "mdi:weather-rainy",
+          "alert_sea": "mdi:waves",
+          "alert_cold": "mdi:snowflake",
+          "alert_warm": "mdi:thermometer-high",
+          "alert_warm_night": "mdi:weather-night",
+          "alert_snow": "mdi:weather-snowy"
+        };
+        const activeAlerts = [];
         for (const key of alertKeys) {
           const entityId = this._config[`${key}_entity`];
-          if (entityId) {
-            const specific = this._hass.states[entityId];
-            if (specific?.state === "opened") {
-              let attrDetails = '';
-              const attrs = specific.attributes ?? {};
-              const attrKeys = ["inicio", "fin", "fecha", "periodo", "comentario", "umbral", "peligro", "nivel"];
-              attrKeys.forEach(attrKey => {
-                if (attrs[attrKey] !== undefined && attrs[attrKey] !== null) {
-                  const displayValue = attrKey === "umbral"
-                    ? getThresholdTranslation(this._hass, key, attrs[attrKey], attrs[attrKey])
-                    : attrs[attrKey];
-                  attrDetails += `<div class="alert-attr"><span class="alert-attr-name">${getTranslation(this._hass, attrKey)}:</span> <span class="alert-attr-value">${displayValue}</span></div>`;
-                }
-              });
-              detailsHtml += `
-                <div class="alert-detail-item">
-                  <div class="alert-name">${alertMap[key]}</div>
-                  ${attrDetails}
-                </div>
-              `;
+          if (!entityId) continue;
+          const specific = this._hass.states[entityId];
+          if (specific?.state !== "opened") continue;
+
+          const attrs = specific.attributes ?? {};
+          const levelMeta = getAlertLevelMeta(this._hass, attrs.peligro);
+          const expiryTs = attrs.fin && isFinite(new Date(attrs.fin).getTime())
+            ? new Date(attrs.fin).getTime()
+            : Number.POSITIVE_INFINITY;
+          const expiry = Number.isFinite(expiryTs) ? this._formatTimestamp(attrs.fin) : "";
+          const danger = Number.parseInt(attrs.peligro, 10);
+
+          let attrDetails = '';
+          const attrKeys = ["inicio", "fin", "fecha", "periodo", "comentario", "umbral", "peligro", "nivel"];
+          attrKeys.forEach(attrKey => {
+            if (attrs[attrKey] !== undefined && attrs[attrKey] !== null) {
+              const displayValue = attrKey === "umbral"
+                ? getThresholdTranslation(this._hass, key, attrs[attrKey], attrs[attrKey])
+                : attrs[attrKey];
+              attrDetails += `<div class="alert-attr"><span class="alert-attr-name">${getTranslation(this._hass, attrKey)}:</span> <span class="alert-attr-value">${displayValue}</span></div>`;
             }
-          }
+          });
+          activeAlerts.push({
+            key,
+            name: alertMap[key],
+            icon: alertIconMap[key] || "mdi:alert",
+            levelMeta,
+            expiry,
+            expiryTs,
+            danger: Number.isFinite(danger) ? danger : 0,
+            sortIndex: alertKeys.indexOf(key),
+            detailHtml: `
+              <div class="alert-detail-item" data-alert-key="${key}" id="alert-detail-${key}" tabindex="-1" style="--alert-detail-bg: ${levelMeta.background}; --alert-detail-fg: ${levelMeta.textColor};">
+                <div class="alert-name">${alertMap[key]}</div>
+                ${attrDetails}
+              </div>
+            `
+          });
         }
-        if (alertCount > 0) {
+
+        activeAlerts.sort((a, b) => {
+          if (a.expiryTs !== b.expiryTs) return a.expiryTs - b.expiryTs;
+          if (b.danger !== a.danger) return b.danger - a.danger;
+          return a.sortIndex - b.sortIndex;
+        });
+
+        const detailsHtml = activeAlerts.map(({ detailHtml }) => detailHtml).join("");
+
+        alertsHtml = `
+          <div class="alerts-section">
+            <div class="alerts-title">${getTranslation(this._hass, 'alerts')}</div>
+            <div class="alerts-summary">
+        `;
+        if (alertCount === 0) {
+          alertsHtml += `<ha-icon icon="mdi:check-circle" style="color: green;"></ha-icon> ${getTranslation(this._hass, 'no_alerts')}`;
+        } else {
+          alertsHtml += `<ha-icon icon="mdi:alert-circle" style="color: red;"></ha-icon> ${getTranslation(this._hass, 'active_alerts', { count: alertCount })}`;
+        }
+        alertsHtml += `</div>`;
+
+        if (alertCount > 0 && activeAlerts.length > 0 && this._config.option_show_alert_badges !== false) {
           alertsHtml += `
-            <div class="alerts-details-section">
-              <div class="alerts-details-title">${getTranslation(this._hass, 'alerts_details')}</div>
-              ${detailsHtml}
+            <div class="alerts-badges">
+              ${activeAlerts.map(({ key, name, icon, levelMeta, expiry }) => `
+                <button type="button" class="alert-badge alert-badge--${levelMeta.key}" data-alert-key="${key}" aria-controls="alert-detail-${key}" style="--alert-badge-color: ${levelMeta.color}; --alert-badge-bg: ${levelMeta.background}; --alert-badge-fg: ${levelMeta.textColor};" title="${name}: ${levelMeta.label}" aria-label="${name}: ${levelMeta.label}">
+                  <ha-icon icon="${icon}"></ha-icon>
+                  <span class="alert-badge-name">${name}</span>
+                  <span class="alert-badge-level">${levelMeta.label}</span>
+                  ${expiry ? `<span class="alert-badge-expiry">${getTranslation(this._hass, 'until', { value: expiry })}</span>` : ''}
+                </button>
+              `).join("")}
             </div>
+          `;
+        }
+
+        if (alertCount > 0 && detailsHtml) {
+          const detailsOpen = this._alertsExpanded ? " open" : "";
+          alertsHtml += `
+            <details class="alerts-details"${detailsOpen}>
+              <summary class="alerts-details-summary">
+                <span>${getTranslation(this._hass, 'alerts_details')}</span>
+                <ha-icon class="alerts-details-chevron" icon="mdi:chevron-down"></ha-icon>
+              </summary>
+              <div class="alerts-details-content">${detailsHtml}</div>
+            </details>
           `;
         }
         alertsHtml += `</div>`;
@@ -1854,13 +1991,27 @@ class MeteocatCard extends HTMLElement {
             .slider-bg { position: absolute; top: 0; left: 0; height: 100%; width: var(--slider-value, 0%); background: var(--slider-color, var(--primary-color, #03a9f4)); border-radius: 4px; transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); }
             .slider-bar.dragging .slider-bg { transition: none; }
             .alerts-section { padding: 8px 20px; }
-            .alerts-title { font-size: 1.3em; font-weight: 500; margin-bottom: 4px; font-family: sans-serif; }
-            .alerts-summary { display: flex; align-items: center; gap: 4px; font-size: 1.0em; font-family: sans-serif; }
-            .alerts-details-section { margin-top: 8px; }
-            .alerts-details-title { font-size: 1.3em; font-weight: 500; margin-bottom: 4px; font-family: sans-serif; }
-            .alert-detail-item { margin-bottom: 12px; }
+            .alerts-title { font-size: 1.3em; font-weight: 700; margin-bottom: 4px; font-family: sans-serif; }
+            .alerts-summary { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 1.0em; font-family: sans-serif; }
+            .alerts-badges { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+            .alert-badge { display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; padding: 7px 10px; appearance: none; -webkit-appearance: none; border: 0; border-left: 4px solid var(--alert-badge-color, #546e7a); border-radius: 6px; background-color: var(--alert-badge-bg, #dfe6e9); color: var(--alert-badge-fg, #1f2a30); font-size: 0.9em; font-family: sans-serif; line-height: 1.35; text-align: left; white-space: normal; cursor: pointer; user-select: none; }
+            .alert-badge:hover { filter: brightness(0.97); }
+            .alert-badge:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: 2px; }
+            .alert-badge ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; color: var(--alert-badge-color, #ffffff); }
+            .alert-badge-name { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow-wrap: break-word; }
+            .alert-badge-level { flex: 0 0 auto; font-weight: 600; }
+            .alert-badge-expiry { flex: 0 0 auto; margin-left: 6px; font-size: 0.82em; font-weight: 400; opacity: 0.72; white-space: nowrap; }
+            .alerts-details { margin-top: 8px; border-top: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12)); padding-top: 4px; }
+            .alerts-details-summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; cursor: pointer; list-style: none; font-size: 1.15em; font-weight: 700; font-family: sans-serif; color: var(--primary-text-color); }
+            .alerts-details-summary::-webkit-details-marker { display: none; }
+            .alerts-details-chevron { transition: transform 0.2s ease; }
+            .alerts-details[open] .alerts-details-chevron { transform: rotate(180deg); }
+            .alerts-details-content { padding-top: 4px; }
+            .alert-detail-item { margin-bottom: 10px; padding: 6px 8px; border-radius: 6px; outline: none; transition: background-color 0.2s ease, color 0.2s ease; }
+            .alert-detail-item--highlighted { background-color: var(--alert-detail-bg, var(--secondary-background-color, rgba(127, 127, 127, 0.12))); color: var(--alert-detail-fg, var(--primary-text-color)); }
             .alert-name { font-weight: bold; font-size: 1.0em; text-decoration: underline; font-family: sans-serif; }
             .alert-attr { font-size: 0.9em; color: var(--secondary-text-color); font-family: sans-serif; }
+            .alert-detail-item--highlighted .alert-attr { color: var(--alert-detail-fg, var(--secondary-text-color)); opacity: 0.82; }
             .alert-attr-name { font-weight: bold; }
             .alert-attr-value { }
             .attribution { text-align: center; font-size: 0.8em; color: var(--secondary-text-color); padding: 8px 20px; font-family: sans-serif; }
@@ -1912,6 +2063,21 @@ class MeteocatCard extends HTMLElement {
 
       if (dailyBtn) dailyBtn.addEventListener('click', () => this._toggleForecast('daily'));
       if (hourlyBtn) hourlyBtn.addEventListener('click', () => this._toggleForecast('hourly'));
+
+      const alertsDetails = this.shadowRoot.querySelector('.alerts-details');
+      if (alertsDetails) {
+        alertsDetails.addEventListener('toggle', () => {
+          this._alertsExpanded = alertsDetails.open;
+        });
+      }
+
+      this.shadowRoot.querySelectorAll('.alert-badge[data-alert-key]').forEach((badge) => {
+        badge.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          this._openAlertDetails(badge.dataset.alertKey);
+        });
+      });
 
       if (this.resizeObserver) {
         this.resizeObserver.disconnect();

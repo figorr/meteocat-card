@@ -5,7 +5,7 @@ Meteocat Card is a custom card for Home Assistant that provides meteorological d
 ## Features
 - Current weather conditions 
 - Hourly and daily weather forecasts
-- Alerts
+- Alerts with full-width SMP danger rows, end times, and collapsible details
 
 For more information, check the [README](https://github.com/figorr/meteocat-card).
 

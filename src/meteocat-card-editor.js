@@ -24,6 +24,9 @@ const translations = {
     option_show_eto: "Evapotranspiration",
     option_show_chart: "Show forecast trend",
     option_detail_tap_more_info: "Open entity on click",
+    alert_options: "Alert options",
+    option_show_alert_badges: "Alert level badges",
+    option_alert_details_collapsed: "Collapse alert details by default",
   },
   es: {
     title_default: "Meteocat",
@@ -49,6 +52,9 @@ const translations = {
     option_show_eto: "Evapotranspiración",
     option_show_chart: "Mostrar gráfico de tendencia",
     option_detail_tap_more_info: "Abrir entidad al hacer clic",
+    alert_options: "Opciones de alertas",
+    option_show_alert_badges: "Indicadores de nivel de alerta",
+    option_alert_details_collapsed: "Contraer detalles de alertas por defecto",
   },
   ca: {
     title_default: "Meteocat",
@@ -74,6 +80,9 @@ const translations = {
     option_show_eto: "Evapotranspiració",
     option_show_chart: "Mostrar gràfic de tendència",
     option_detail_tap_more_info: "Obrir entitat en fer clic",
+    alert_options: "Opcions d'alertes",
+    option_show_alert_badges: "Indicadors de nivell d'alerta",
+    option_alert_details_collapsed: "Replegar detalls d'alertes per defecte",
   },
 };
 
@@ -143,6 +152,8 @@ class MeteocatCardEditor extends HTMLElement {
       option_show_eto: true,
       option_show_chart: false,
       option_detail_tap_more_info: true,
+      option_show_alert_badges: true,
+      option_alert_details_collapsed: true,
       debug: false,
       ...config,
     };
@@ -165,6 +176,7 @@ class MeteocatCardEditor extends HTMLElement {
     this._hass = hass;
     if (this._form) {
       this._form.generalForm.hass = hass;
+      this._form.alertForm.hass = hass;
       this._form.sunForm.hass = hass;
       this._form.moonForm.hass = hass;
       this._form.etoForm.hass = hass;
@@ -299,6 +311,19 @@ class MeteocatCardEditor extends HTMLElement {
         ]
       );
 
+      // Alertas
+      const alertForm = makeForm(
+        {
+          option_show_alert_badges: this._config.option_show_alert_badges,
+          option_alert_details_collapsed: this._config.option_alert_details_collapsed,
+        },
+        [
+          { name: "option_show_alert_badges", selector: { boolean: {} } },
+          { name: "option_alert_details_collapsed", selector: { boolean: {} } },
+        ],
+        "indented-form"
+      );
+
       // Sol
       const sunForm = makeForm(
         {
@@ -354,7 +379,7 @@ class MeteocatCardEditor extends HTMLElement {
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: updated }, bubbles: true, composed: true }));
       };
 
-      [generalForm, sunForm, moonForm, etoForm].forEach((f) =>
+      [generalForm, alertForm, sunForm, moonForm, etoForm].forEach((f) =>
         f.addEventListener("value-changed", handleChange)
       );
 
@@ -374,13 +399,14 @@ class MeteocatCardEditor extends HTMLElement {
 
       wrapper.append(
         makeSection(null, generalForm),
+        makeSection("alert_options", alertForm),
         makeSection("sun_options", sunForm),
         makeSection("moon_options", moonForm),
         makeSection("eto_options", etoForm)
       );
 
       this.shadowRoot.appendChild(wrapper);
-      this._form = { generalForm, sunForm, moonForm, etoForm };
+      this._form = { generalForm, alertForm, sunForm, moonForm, etoForm };
     } catch (err) {
       console.error("MeteocatCardEditor render error:", err);
       const errorDiv = document.createElement("div");
