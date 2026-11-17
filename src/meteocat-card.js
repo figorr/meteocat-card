@@ -721,6 +721,7 @@ class MeteocatCard extends HTMLElement {
     this._updateTimeout = null;
     this._updateDebounceDelay = 200; // 0.2 segundos
     this._alertsExpanded = null;
+    this._selectedAlertKey = null;
     this._debug = false; // Modo de depuración desactivado por defecto
     this.visibleItems = 4;
     this.resizeObserver = null;
@@ -772,6 +773,7 @@ class MeteocatCard extends HTMLElement {
     if (!target) return;
 
     this._alertsExpanded = true;
+    this._selectedAlertKey = alertKey;
     if (details) details.open = true;
 
     this.shadowRoot.querySelectorAll('.alert-detail-item--highlighted').forEach((item) => {
@@ -861,6 +863,7 @@ class MeteocatCard extends HTMLElement {
     delete this._config.sunrise_entity;
     delete this._config.sunset_entity;
     this._alertsExpanded = this._config.option_alert_details_collapsed === false;
+    this._selectedAlertKey = null;
     this._currentForecast = this._config.default_forecast_view === "hourly" ? "hourly" : "daily";
     this._config.icon_path_type = normalizeIconPathType(
       this._config.icon_path_type
@@ -1011,6 +1014,10 @@ class MeteocatCard extends HTMLElement {
     return directions[index];
   }
 
+  _getTimeZone() {
+    return this._hass?.config?.time_zone || this._hass?.time_zone || "Europe/Madrid";
+  }
+
   _formatTimestamp(timestamp) {
     if (!timestamp || !isFinite(new Date(timestamp).getTime())) {
       this._log("Invalid timestamp", timestamp);
@@ -1036,7 +1043,7 @@ class MeteocatCard extends HTMLElement {
     const timeStr = date.toLocaleTimeString(this._hass?.language || "es-ES", {
       hour: "2-digit",
       minute: "2-digit",
-      timeZone: this._hass?.time_zone || "Europe/Madrid",
+      timeZone: this._getTimeZone(),
     });
 
     const days = [
@@ -1055,7 +1062,7 @@ class MeteocatCard extends HTMLElement {
       dateStr,
       todayStr,
       tomorrowStr,
-      timeZone: this._hass?.time_zone || "Europe/Madrid"
+      timeZone: this._getTimeZone()
     });
 
     if (dateStr === todayStr) {
@@ -1066,7 +1073,7 @@ class MeteocatCard extends HTMLElement {
       const dateFormatted = date.toLocaleDateString(this._hass?.language || "es-ES", {
         day: "2-digit",
         month: "2-digit",
-        timeZone: this._hass?.time_zone || "Europe/Madrid",
+        timeZone: this._getTimeZone(),
       });
       return `${dayAbbr} (${dateFormatted}) ${timeStr}`;
     }
@@ -1085,7 +1092,7 @@ class MeteocatCard extends HTMLElement {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
-      timeZone: this._hass?.time_zone || "Europe/Madrid",
+      timeZone: this._getTimeZone(),
     });
 
     const days = [
@@ -1102,7 +1109,7 @@ class MeteocatCard extends HTMLElement {
     const dayNum = date.getDate();
     const monthAbbr = date.toLocaleDateString(lang, {
       month: 'short',
-      timeZone: this._hass?.time_zone || "Europe/Madrid",
+      timeZone: this._getTimeZone(),
     }).toLowerCase().replace('.', '');
     const year = date.getFullYear();
 
@@ -1735,7 +1742,9 @@ class MeteocatCard extends HTMLElement {
             if (attrs[attrKey] !== undefined && attrs[attrKey] !== null) {
               const displayValue = attrKey === "umbral"
                 ? getThresholdTranslation(this._hass, key, attrs[attrKey], attrs[attrKey])
-                : attrs[attrKey];
+                : (attrKey === "inicio" || attrKey === "fin")
+                  ? this._formatTimestamp(attrs[attrKey])
+                  : attrs[attrKey];
               attrDetails += `<div class="alert-attr"><span class="alert-attr-name">${getTranslation(this._hass, attrKey)}:</span> <span class="alert-attr-value">${displayValue}</span></div>`;
             }
           });
@@ -1749,7 +1758,7 @@ class MeteocatCard extends HTMLElement {
             danger: Number.isFinite(danger) ? danger : 0,
             sortIndex: alertKeys.indexOf(key),
             detailHtml: `
-              <div class="alert-detail-item" data-alert-key="${key}" id="alert-detail-${key}" tabindex="-1" style="--alert-detail-bg: ${levelMeta.background}; --alert-detail-fg: ${levelMeta.textColor};">
+              <div class="alert-detail-item${this._alertsExpanded && this._selectedAlertKey === key ? " alert-detail-item--highlighted" : ""}" data-alert-key="${key}" id="alert-detail-${key}" tabindex="-1" style="--alert-detail-bg: ${levelMeta.background}; --alert-detail-fg: ${levelMeta.textColor};">
                 <div class="alert-name">${alertMap[key]}</div>
                 ${attrDetails}
               </div>
@@ -2087,9 +2096,33 @@ class MeteocatCard extends HTMLElement {
       if (hourlyBtn) hourlyBtn.addEventListener('click', () => this._toggleForecast('hourly'));
 
       const alertsDetails = this.shadowRoot.querySelector('.alerts-details');
+      const alertsDetailsSummary = this.shadowRoot.querySelector('.alerts-details-summary');
+      if (alertsDetails && alertsDetailsSummary) {
+        alertsDetailsSummary.addEventListener('click', () => {
+          if (alertsDetails.open) {
+            this._selectedAlertKey = null;
+            this.shadowRoot.querySelectorAll('.alert-detail-item--highlighted').forEach((item) => {
+              item.classList.remove('alert-detail-item--highlighted');
+            });
+          }
+        });
+      }
+
       if (alertsDetails) {
         alertsDetails.addEventListener('toggle', () => {
           this._alertsExpanded = alertsDetails.open;
+          const selected = this._selectedAlertKey
+            ? this.shadowRoot.querySelector(`.alert-detail-item[data-alert-key="${this._selectedAlertKey}"]`)
+            : null;
+
+          if (alertsDetails.open) {
+            if (selected) selected.classList.add('alert-detail-item--highlighted');
+          } else {
+            this._selectedAlertKey = null;
+            this.shadowRoot.querySelectorAll('.alert-detail-item--highlighted').forEach((item) => {
+              item.classList.remove('alert-detail-item--highlighted');
+            });
+          }
         });
       }
 
