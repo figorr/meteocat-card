@@ -1044,6 +1044,7 @@ class MeteocatCard extends HTMLElement {
       label: isDaily
         ? this._formatForecastDate(forecast.datetime)
         : this._formatForecastHour(forecast.datetime),
+      dayLabel: isDaily ? "" : this._formatForecastDate(forecast.datetime),
       temp: this._toFiniteNumber(forecast.temperature),
       templow: isDaily ? this._toFiniteNumber(forecast.templow) : null,
       precip: isDaily ? null : this._toFiniteNumber(forecast.precipitation),
@@ -1065,10 +1066,14 @@ class MeteocatCard extends HTMLElement {
     const scaleSpan = scaleMax - scaleMin;
     const yForTemp = (value) => plotBottom - ((value - scaleMin) / scaleSpan) * plotHeight;
 
-    const precipValues = points
-      .map((point) => point.precip)
-      .filter((value) => value !== null);
-    const maxPrecip = precipValues.length ? Math.max(...precipValues, 0) : 0;
+    let maxPrecip = 0;
+    let maxPrecipIndex = -1;
+    points.forEach((point, index) => {
+      if (point.precip !== null && point.precip > maxPrecip) {
+        maxPrecip = point.precip;
+        maxPrecipIndex = index;
+      }
+    });
     const barMaxHeight = isDaily ? 0 : rainLaneHeight;
 
     const ticks = [
@@ -1136,16 +1141,24 @@ class MeteocatCard extends HTMLElement {
     ].join("");
 
     const labels = points
-      .map((point) => `<text x="${point.x.toFixed(1)}" y="${xLabelY}" text-anchor="middle" class="chart-x-label">${point.label}</text>`)
+      .map((point) => {
+        const dayLabel = point.dayLabel
+          ? `<tspan class="chart-x-label-day" dx="3">${point.dayLabel}</tspan>`
+          : "";
+        return `<text x="${point.x.toFixed(1)}" y="${xLabelY}" text-anchor="middle" class="chart-x-label">${point.label}${dayLabel}</text>`;
+      })
       .join("");
 
     const axisLabels = ticks
       .map((tick) => `<span style="top:${((tick.y / height) * 100).toFixed(2)}%">${Math.round(tick.value)}</span>`)
       .join("");
 
+    const rainLegend = maxPrecip > 0
+      ? `<button type="button" class="chart-legend-item chart-legend-action" data-rain-index="${maxPrecipIndex}"><span class="chart-legend-bar"></span>${getTranslation(this._hass, "chart_rain")} (${getTranslation(this._hass, "chart_rain_max", { value: this._formatNumber(maxPrecip) })})</button>`
+      : "";
     const legend = isDaily
       ? `<span class="chart-legend-item"><span class="chart-legend-line chart-legend-max"></span>${getTranslation(this._hass, "chart_max")}</span><span class="chart-legend-item"><span class="chart-legend-line chart-legend-min"></span>${getTranslation(this._hass, "chart_min")}</span>`
-      : `<span class="chart-legend-item"><span class="chart-legend-line chart-legend-temp"></span>${getTranslation(this._hass, "chart_temperature")}</span>${maxPrecip > 0 ? `<span class="chart-legend-item"><span class="chart-legend-bar"></span>${getTranslation(this._hass, "chart_rain")} (${getTranslation(this._hass, "chart_rain_max", { value: this._formatNumber(maxPrecip) })})</span>` : ""}`;
+      : `<span class="chart-legend-item"><span class="chart-legend-line chart-legend-temp"></span>${getTranslation(this._hass, "chart_temperature")}</span>${rainLegend}`;
 
     const viewportWidth = this.visibleItems * FORECAST_ITEM_WIDTH - 8;
     return `
@@ -1458,12 +1471,11 @@ class MeteocatCard extends HTMLElement {
                     const maxTemp = forecast.temperature || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'temperature') || '-';
                     const minTemp = forecast.templow || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'templow') || '-';
                     const pop = forecast.precipitation_probability || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'precipitation_probability') || '-';
-                    const pos = forecast.precipitation || this._getForecastPropFromWeather(this._dailyForecasts, forecastDate, 'precipitation') || '0';
                     const forecastDay = this._formatForecastDate(forecast.datetime);
                     return `
                       <div class="forecast-item">
                         <div class="forecast-day">${forecastDay}</div>
-                        <img src="${forecastIcon}" alt="${condition}" class="forecast-icon">
+                        <img src="${forecastIcon}" alt="${condition}" class="forecast-icon" draggable="false">
                         <div class="forecast-temp">${this._formatNumber(maxTemp)}°C / ${this._formatNumber(minTemp)}°C</div>
                         <div class="forecast-precip"><ha-icon icon="mdi:weather-rainy"></ha-icon>${this._formatNumber(pop, 0)}%</div>
                       </div>
@@ -1498,7 +1510,7 @@ class MeteocatCard extends HTMLElement {
                     return `
                       <div class="forecast-item">
                         <div class="forecast-hour">${forecastHour}</div>
-                        <img src="${forecastIcon}" alt="${condition}" class="forecast-icon">
+                        <img src="${forecastIcon}" alt="${condition}" class="forecast-icon" draggable="false">
                         <div class="forecast-temp">${this._formatNumber(temp)}°C</div>
                         <div class="forecast-humidity"><ha-icon icon="mdi:water-percent"></ha-icon>${getTranslation(this._hass, 'humidity', { value: this._formatNumber(humidity, 0) })}</div>
                         <div class="forecast-precip"><ha-icon icon="mdi:weather-rainy"></ha-icon>${this._formatNumber(pos)} mm</div>
@@ -1560,13 +1572,11 @@ class MeteocatCard extends HTMLElement {
           "alert_snow": getTranslation(this._hass, 'snow_alert')
         };
         let detailsHtml = '';
-        let hasActiveAlerts = false;
         for (const key of alertKeys) {
           const entityId = this._config[`${key}_entity`];
           if (entityId) {
             const specific = this._hass.states[entityId];
             if (specific?.state === "opened") {
-              hasActiveAlerts = true;
               let attrDetails = '';
               const attrs = specific.attributes ?? {};
               const attrKeys = ["inicio", "fin", "fecha", "periodo", "comentario", "umbral", "peligro", "nivel"];
@@ -1718,16 +1728,21 @@ class MeteocatCard extends HTMLElement {
             .chart-title { font-size: 0.95em; font-weight: 500; }
             .chart-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--secondary-text-color); font-size: 0.78em; }
             .chart-legend-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+            .chart-legend-action { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+            .chart-legend-action:hover { color: var(--primary-text-color); }
+            .chart-legend-action:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
             .chart-legend-line { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
             .chart-legend-max, .chart-legend-temp { background: var(--mc-chart-max); }
             .chart-legend-min { background: var(--mc-chart-min); }
             .chart-legend-bar { display: inline-block; width: 8px; height: 10px; border-radius: 1px; background: var(--mc-chart-rain); opacity: 0.5; }
             .chart-body { position: relative; }
-            .chart-viewport { overflow: hidden; max-width: 100%; }
+            .chart-viewport { overflow: hidden; max-width: 100%; cursor: grab; touch-action: pan-y; user-select: none; }
+            .chart-viewport.dragging { cursor: grabbing; }
             .chart-track { transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); will-change: transform; }
             .forecast-chart { display: block; overflow: visible; }
             .chart-grid-line { stroke: var(--divider-color, rgba(127, 127, 127, 0.2)); stroke-width: 1; }
             .chart-x-label { fill: var(--secondary-text-color, #727272); font-size: 10px; font-family: sans-serif; }
+            .chart-x-label-day { font-size: 8px; }
             .chart-temp-line { fill: none; stroke: var(--mc-chart-max); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
             .chart-temp-low-line { fill: none; stroke: var(--mc-chart-min); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
             .chart-temp-band { fill: var(--mc-chart-max); opacity: 0.12; }
@@ -1741,11 +1756,11 @@ class MeteocatCard extends HTMLElement {
             .chart-y-axis { position: absolute; left: 0; top: 0; width: 36px; pointer-events: none; font-family: sans-serif; }
             .chart-y-axis span { position: absolute; left: 0; transform: translateY(-50%); padding: 0 2px; border-radius: 2px; background: var(--ha-card-background, var(--card-background-color, transparent)); color: var(--secondary-text-color, #727272); font-size: 10px; line-height: 1; }
             .forecast-slider { position: relative; }
-            .slider-container { overflow: hidden; cursor: grab; user-select: none; max-width: 100%; }
+            .slider-container { overflow: hidden; cursor: grab; user-select: none; max-width: 100%; touch-action: pan-y; }
             .slider-container.dragging { cursor: grabbing; }
-            .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); }
+            .slider-track { display: flex; transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); will-change: transform; }
             .forecast-item { display: flex; flex-direction: column; align-items: center; padding: 2px; width: 100px; min-width: 100px; flex: 0 0 100px; margin-right: 8px; box-sizing: border-box; }
-            .forecast-icon { width: 48px; height: 48px; }
+            .forecast-icon { width: 48px; height: 48px; -webkit-user-drag: none; user-select: none; }
             .forecast-day, .forecast-hour { font-weight: 500; font-family: sans-serif; }
             .forecast-temp { font-size: 0.9em; font-family: sans-serif; }
             .forecast-humidity { font-size: 0.9em; display: flex; align-items: center; gap: 2px; font-family: sans-serif; }
@@ -1846,6 +1861,7 @@ class MeteocatCard extends HTMLElement {
     const sliderBar = this.shadowRoot.querySelector('.slider-bar');
     const sliderContainer = this.shadowRoot.querySelector('.slider-container');
     const chartTrack = this.shadowRoot.querySelector('.chart-track');
+    const chartViewport = this.shadowRoot.querySelector('.chart-viewport');
 
     if (!sliderTrack || !sliderBar || !sliderContainer) return;
 
@@ -1853,6 +1869,7 @@ class MeteocatCard extends HTMLElement {
     const totalItems = this._currentForecast === 'daily' ? this._dailyForecasts.length : this._hourlyForecasts.length;
     const maxSlides = Math.max(0, totalItems - this.visibleItems);
     const maxTranslate = maxSlides * itemWidth;
+    let activeDragSurface = null;
 
     const setTrackTranslate = (translateX, animate) => {
       const transition = animate ? 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)' : 'none';
@@ -1884,15 +1901,24 @@ class MeteocatCard extends HTMLElement {
       }
     };
 
+    const rainLegend = this.shadowRoot.querySelector('.chart-legend-action');
+    if (rainLegend) {
+      rainLegend.onclick = () => {
+        const rainIndex = Number(rainLegend.dataset.rainIndex);
+        if (!Number.isInteger(rainIndex) || rainIndex < 0 || maxSlides <= 0) return;
+        const centerOffset = Math.floor((this.visibleItems - 1) / 2);
+        const targetSlide = Math.max(0, Math.min(maxSlides, rainIndex - centerOffset));
+        updateSliderPosition((targetSlide / maxSlides) * 100);
+      };
+    }
+
     // Eventos para el slider-bar
-    let barStartX = 0;
     const onBarPointerDown = (event) => {
       if (totalItems <= this.visibleItems) return;
       event.preventDefault();
       this._isDragging = true;
       sliderBar.classList.add('dragging');
       sliderBar.setPointerCapture(event.pointerId);
-      barStartX = event.clientX;
     };
 
     const onBarPointerMove = (event) => {
@@ -1931,8 +1957,9 @@ class MeteocatCard extends HTMLElement {
       if (totalItems <= this.visibleItems) return;
       event.preventDefault();
       this._isDragging = true;
-      sliderContainer.classList.add('dragging');
-      sliderContainer.setPointerCapture(event.pointerId);
+      activeDragSurface = event.currentTarget;
+      activeDragSurface.classList.add('dragging');
+      activeDragSurface.setPointerCapture(event.pointerId);
       containerStartX = event.clientX;
       const transform = window.getComputedStyle(sliderTrack).transform;
       containerStartTranslate = transform === 'none' ? 0 : parseFloat(transform.split(',')[4].trim());
@@ -1952,12 +1979,30 @@ class MeteocatCard extends HTMLElement {
     const onContainerPointerUp = (event) => {
       if (!this._isDragging) return;
       this._isDragging = false;
-      sliderContainer.classList.remove('dragging');
-      sliderContainer.releasePointerCapture(event.pointerId);
+      if (activeDragSurface) {
+        activeDragSurface.classList.remove('dragging');
+        if (activeDragSurface.hasPointerCapture(event.pointerId)) {
+          activeDragSurface.releasePointerCapture(event.pointerId);
+        }
+        activeDragSurface = null;
+      }
       const currentTranslate = parseFloat(window.getComputedStyle(sliderTrack).transform.split(',')[4].trim());
       const newSlide = Math.round(-currentTranslate / itemWidth);
       const percentage = (newSlide / maxSlides) * 100;
       updateSliderPosition(percentage);
+    };
+
+    const onContainerPointerCancel = (event) => {
+      if (!this._isDragging) return;
+      this._isDragging = false;
+      if (activeDragSurface) {
+        activeDragSurface.classList.remove('dragging');
+        if (activeDragSurface.hasPointerCapture(event.pointerId)) {
+          activeDragSurface.releasePointerCapture(event.pointerId);
+        }
+        activeDragSurface = null;
+      }
+      updateSliderPosition(this._sliderValue, false);
     };
 
     // Soporte legacy para touch en slider-bar
@@ -1968,7 +2013,6 @@ class MeteocatCard extends HTMLElement {
       this._isDragging = true;
       sliderBar.classList.add('dragging');
       this._legacySliderTouchCapture = event.touches[0].identifier;
-      barStartX = event.touches[0].clientX;
     };
 
     const onBarTouchMove = (event) => {
@@ -2004,6 +2048,13 @@ class MeteocatCard extends HTMLElement {
     sliderContainer.removeEventListener('pointerdown', this._onContainerPointerDown);
     sliderContainer.removeEventListener('pointermove', this._onContainerPointerMove);
     sliderContainer.removeEventListener('pointerup', this._onContainerPointerUp);
+    sliderContainer.removeEventListener('pointercancel', this._onContainerPointerCancel);
+    if (chartViewport) {
+      chartViewport.removeEventListener('pointerdown', this._onContainerPointerDown);
+      chartViewport.removeEventListener('pointermove', this._onContainerPointerMove);
+      chartViewport.removeEventListener('pointerup', this._onContainerPointerUp);
+      chartViewport.removeEventListener('pointercancel', this._onContainerPointerCancel);
+    }
 
     // Asignar nuevos eventos
     this._onBarPointerDown = onBarPointerDown;
@@ -2017,6 +2068,7 @@ class MeteocatCard extends HTMLElement {
     this._onContainerPointerDown = onContainerPointerDown;
     this._onContainerPointerMove = onContainerPointerMove;
     this._onContainerPointerUp = onContainerPointerUp;
+    this._onContainerPointerCancel = onContainerPointerCancel;
 
     sliderBar.addEventListener('pointerdown', onBarPointerDown);
     sliderBar.addEventListener('pointermove', onBarPointerMove);
@@ -2029,6 +2081,13 @@ class MeteocatCard extends HTMLElement {
     sliderContainer.addEventListener('pointerdown', onContainerPointerDown);
     sliderContainer.addEventListener('pointermove', onContainerPointerMove);
     sliderContainer.addEventListener('pointerup', onContainerPointerUp);
+    sliderContainer.addEventListener('pointercancel', onContainerPointerCancel);
+    if (chartViewport) {
+      chartViewport.addEventListener('pointerdown', onContainerPointerDown);
+      chartViewport.addEventListener('pointermove', onContainerPointerMove);
+      chartViewport.addEventListener('pointerup', onContainerPointerUp);
+      chartViewport.addEventListener('pointercancel', onContainerPointerCancel);
+    }
 
     // Inicializar posición
     updateSliderPosition(this._sliderValue, false);
