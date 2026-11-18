@@ -185,7 +185,7 @@ s-rainy-night.svg
    option_show_sun_times: true
    option_show_moon_info: true
    option_show_moon_times: true
-   option_show_chart: false
+   option_show_chart: true
    option_detail_tap_more_info: true
    debug: false
    fade_duration: 0.3
@@ -215,7 +215,7 @@ s-rainy-night.svg
       option_show_sun_times: true
       option_show_moon_info: true
       option_show_moon_times: true
-      option_show_chart: false
+      option_show_chart: true
       debug: false
       fade_duration: 0.3
       ```
@@ -234,7 +234,7 @@ s-rainy-night.svg
 | `entity`                 | string  | —                                 | **Required.** Your Meteocat weather entity.                |
 | `default_forecast_view`  | boolean | `daily`                           | Use daily view (`daily`) or hourly view (`hourly`).        |
 | `option_static_icons`    | boolean | `false`                           | Use static icons (`true`) or animated icons (`false`).     |
-| `option_show_chart`      | boolean | `false`                           | Use `true` to show the forecast trend chart.               |
+| `option_show_chart`      | boolean | `true`                            | Use `false` to hide the forecast trend chart.              |
 | `option_detail_tap_more_info` | boolean | `true`                         | Use `false` to disable opening the entity more-info dialog from current metrics, temperature, and feels-like. |
 | `option_show_alert_badges` | boolean | `true`                        | Use `false` to hide the colored SMP danger badges while keeping alert details available. |
 | `option_alert_details_collapsed` | boolean | `true`                  | Use `false` to show alert details expanded by default. |
@@ -267,7 +267,7 @@ When there are no active alerts, the same row layout shows a green “No alerts�
 
 ### Forecast trend chart
 
-Set `option_show_chart: true` to display a trend chart below the forecast cards and above the slider. The chart follows the selected forecast view and moves together with the forecast cards, keeping 4 items visible on desktop and 3 on mobile.
+The forecast trend chart is shown by default; set `option_show_chart: false` to hide it. It appears below the forecast cards and above the slider, follows the selected forecast view, and moves together with the forecast cards, keeping 4 items visible on desktop and 3 on mobile.
 
 - **Daily view:** maximum and minimum temperature lines.
 - **Hourly view:** temperature line and precipitation bars in mm for the next 72 hours.
@@ -295,7 +295,7 @@ option_show_sun_info: true
 option_show_sun_times: true
 option_show_moon_info: true
 option_show_moon_times: true
-option_show_chart: false
+option_show_chart: true
 debug: false
 fade_duration: 0.3
 ```

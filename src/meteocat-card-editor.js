@@ -150,7 +150,7 @@ class MeteocatCardEditor extends HTMLElement {
       option_show_moon_info: true,
       option_show_moon_times: true,
       option_show_eto: true,
-      option_show_chart: false,
+      option_show_chart: true,
       option_detail_tap_more_info: true,
       option_show_alert_badges: true,
       option_alert_details_collapsed: true,
