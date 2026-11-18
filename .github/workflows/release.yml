@@ -34,35 +34,8 @@ jobs:
       - name: Build meteocat-card.js
         run: npm run build
 
-      # 5️⃣ Configurar Git author para semantic-release
-      - name: Configure Git author
-        run: |
-          git config user.name "semantic-release-bot"
-          git config user.email "jdcuartero@yahoo.es"
-
-      # 6️⃣ Ejecutar semantic-release
-      - name: Run semantic-release
-        id: semantic_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
-
-      # 7️⃣ Obtener el tag del release
-      - name: Get release tag
-        id: get_tag
-        run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$LATEST_TAG" ]; then
-            echo "Release tag found: $LATEST_TAG"
-            echo "release_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          else
-            echo "No release tag found"
-            echo "release_tag=" >> $GITHUB_OUTPUT
-          fi
-
-      # 8️⃣ Crear estructura del ZIP manual
+      # 5️⃣ Crear estructura del ZIP manual
       - name: Prepare manual ZIP structure
-        if: steps.get_tag.outputs.release_tag != ''
         run: |
           rm -rf tmp
           mkdir -p tmp/meteocat-card
@@ -70,25 +43,32 @@ jobs:
           cp dist/meteocat-card-editor.js tmp/meteocat-card/
           cp -r icons tmp/meteocat-card/
 
-      # 9️⃣ Crear ZIP final
+      # 6️⃣ Crear ZIP final antes de semantic-release
       - name: Create ZIP
-        if: steps.get_tag.outputs.release_tag != ''
         run: |
           cd tmp
           zip -r ../meteocat-card.zip meteocat-card
           cd ..
           echo "ZIP created at $PWD/meteocat-card.zip"
 
-      # 🔟 Subir assets del release
-      - name: Upload release assets
-        if: steps.get_tag.outputs.release_tag != ''
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            dist/meteocat-card.js
-            dist/meteocat-card-editor.js
-            icons/*.svg
-            meteocat-card.zip
-          tag_name: ${{ steps.get_tag.outputs.release_tag }}
+      # 7️⃣ Verificar que existen todos los assets antes de publicar
+      - name: Verify release assets
+        run: |
+          test -f dist/meteocat-card.js
+          test -f dist/meteocat-card-editor.js
+          test -f meteocat-card.zip
+          test "$(find icons -maxdepth 1 -name '*.svg' | wc -l)" -gt 0
+          echo "Release assets are ready"
+
+      # 8️⃣ Configurar Git author para semantic-release
+      - name: Configure Git author
+        run: |
+          git config user.name "semantic-release-bot"
+          git config user.email "jdcuartero@yahoo.es"
+
+      # 9️⃣ Ejecutar semantic-release: crea el release y sube todos los assets
+      - name: Run semantic-release
+        id: semantic_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
