@@ -1,3 +1,20 @@
+# [3.4.0](https://github.com/figorr/meteocat-card/compare/v3.3.0...v3.4.0) (2026-11-18)
+
+
+### Bug Fixes
+
+* align alert times and detail highlight behavior ([4f0990e](https://github.com/figorr/meteocat-card/commit/4f0990e9041453e9a390c97430f336929b3fca24))
+
+
+### Features
+
+* add interactive forecast chart legend ([67c1ceb](https://github.com/figorr/meteocat-card/commit/67c1ceb9e10c6ae55218733f691147e21448722e))
+* add interactive SMP alert badges and details ([e5e6135](https://github.com/figorr/meteocat-card/commit/e5e613555b91db9774fc61d6d2bdf63ea6cb117e))
+* improve forecast chart interactions ([078af02](https://github.com/figorr/meteocat-card/commit/078af022899b07468520761b53737c37c1d44905))
+* open entity details from current metrics ([be0f72c](https://github.com/figorr/meteocat-card/commit/be0f72cb02bbd0c6659db22198d0398352b019fd))
+* show forecast trend chart by default ([de44993](https://github.com/figorr/meteocat-card/commit/de44993e22a2b1046e23ada77a5f82616225db74))
+* show no-alert state as a green badge ([ad798a7](https://github.com/figorr/meteocat-card/commit/ad798a7cf0c6acf4f3e9e02f71f427dd0cb06f2a))
+
 # [3.3.0](https://github.com/figorr/meteocat-card/compare/v3.2.0...v3.3.0) (2026-11-16)
 
 
