@@ -162,11 +162,7 @@ s-rainy-night.svg
 
       #### Visual editor example
 
-      ![Meteocat Card visual editor 01](images/visual_editor_01.png)
-
-      ![Meteocat Card visual editor 02](images/visual_editor_02.png)
-
-      ![Meteocat Card visual editor 03](images/visual_editor_03.png)
+      ![Meteocat Card visual editor](images/visual_editor.png)
 
    - And **save**
 
@@ -187,6 +183,9 @@ s-rainy-night.svg
    option_show_moon_times: true
    option_show_chart: true
    option_detail_tap_more_info: true
+   option_show_eto: true
+   option_show_alert_badges: true
+   option_alert_details_collapsed: true
    debug: false
    fade_duration: 0.3
    ```
@@ -198,11 +197,7 @@ s-rainy-night.svg
 
       #### Code editor example
 
-      ![Meteocat Card code editor 01](images/code_editor_01.png)
-
-      ![Meteocat Card code editor 01](images/code_editor_02.png)
-
-      ![Meteocat Card code editor 01](images/code_editor_03.png)
+      ![Meteocat Card code editor](images/code_editor.png)
 
       ```yaml
       type: custom:meteocat-card
@@ -216,6 +211,10 @@ s-rainy-night.svg
       option_show_moon_info: true
       option_show_moon_times: true
       option_show_chart: true
+      option_show_eto: true
+      option_detail_tap_more_info: true
+      option_show_alert_badges: true
+      option_alert_details_collapsed: true
       debug: false
       fade_duration: 0.3
       ```
@@ -226,6 +225,8 @@ s-rainy-night.svg
    - Temperature, humidity, pressure, wind speed, bearing, gust, precipitation, precipitation probability, uv index, sunset* and sunrise*
    - Daily forecast
    - Hourly forecast
+   - Forecast trend chart (shown by default)
+   - SMP alerts with full-width rows, expiry, and clickable details
 
 ## Configuration Options
 
@@ -251,6 +252,10 @@ s-rainy-night.svg
 
 With `option_detail_tap_more_info: true` (default), current metrics, temperature, and feels-like are clickable when they have a dedicated entity configured or discovered. Clicking, or pressing Enter/Space, opens Home Assistant's more-info dialog for that entity. Values read from weather attributes without their own entity are not marked as clickable.
 
+![Meteocat Card current details hover](images/current_details_hover.png)
+
+![Meteocat Card current details more info](images/current_details_more_info.png)
+
 ### Alert badges and collapsed details
 
 When Meteocat reports active alerts, the card displays one full-width row for each alert type. Each row uses a warm solid variation of the official SMP danger color based on the `peligro` attribute: moderate (`1-2`, yellow), high (`3-4`, orange), and very high (`5-6`, red). The color is applied to the left border and icon, with a matching light background and high-contrast text. The row also includes the alert type, a text level, and the end time when available, so the severity is not conveyed by color alone and long alert names have room to wrap. Rows are ordered by expiry time, soonest first; if two alerts expire at the same time, the higher danger level is shown first.
@@ -274,6 +279,27 @@ The forecast trend chart is shown by default; set `option_show_chart: false` to 
 
 The legend entries are interactive. In the daily view, **Max** and **Min** scroll to the day with the highest maximum or lowest minimum temperature. In the hourly view, the temperature group exposes **Max** and **Min** actions, and the rain group exposes **Start** and **Max** actions. The chart and forecast cards move together to the selected position. Only the circle for the highest maximum temperature and the circle for the lowest minimum temperature are enlarged; the rest keep their normal size, and the buttons only scroll to the relevant point. The peak rain badge and value are also enlarged. The actions inside the hourly legend are separated with a slash.
 
+![Meteocat Card daily forecast trend chart](images/chart_daily.png)
+
+![Meteocat Card hourly forecast trend chart](images/chart_hourly.png)
+
+#### Legend actions
+
+<table>
+  <tr>
+    <td><img src="images/daily_temp_max_button.png" alt="Daily maximum temperature action" width="300"></td>
+    <td><img src="images/daily_temp_min_button.png" alt="Daily minimum temperature action" width="300"></td>
+  </tr>
+  <tr>
+    <td><img src="images/hourly_temp_max_button.png" alt="Hourly maximum temperature action" width="300"></td>
+    <td><img src="images/hourly_temp_min_button.png" alt="Hourly minimum temperature action" width="300"></td>
+  </tr>
+  <tr>
+    <td><img src="images/hourly_first_rain_button.png" alt="First rain action" width="300"></td>
+    <td><img src="images/hourly_max_rain_button.png" alt="Maximum rain action" width="300"></td>
+  </tr>
+</table>
+
 ## Notes
 
 - Make sure your Meteocat integration provides a Weather entity (not just individual sensors) to get full card functionality.
@@ -296,6 +322,10 @@ option_show_sun_times: true
 option_show_moon_info: true
 option_show_moon_times: true
 option_show_chart: true
+option_show_eto: true
+option_detail_tap_more_info: true
+option_show_alert_badges: true
+option_alert_details_collapsed: true
 debug: false
 fade_duration: 0.3
 ```
@@ -313,6 +343,11 @@ option_show_sun_info: true
 option_show_sun_times: true
 option_show_moon_info: true
 option_show_moon_times: true
+option_show_eto: true
+option_show_chart: true
+option_detail_tap_more_info: true
+option_show_alert_badges: true
+option_alert_details_collapsed: true
 debug: false
 fade_duration: 0.3
 ```
@@ -330,6 +365,11 @@ option_show_sun_info: true
 option_show_sun_times: true
 option_show_moon_info: true
 option_show_moon_times: true
+option_show_eto: true
+option_show_chart: true
+option_detail_tap_more_info: true
+option_show_alert_badges: true
+option_alert_details_collapsed: true
 debug: false
 fade_duration: 0.3
 ```
