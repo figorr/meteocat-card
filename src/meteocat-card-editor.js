@@ -189,6 +189,74 @@ class MeteocatCardEditor extends HTMLElement {
     if (!this.shadowRoot.innerHTML) this._render();
   }
 
+  _compactEditorForm(form) {
+    try {
+      const addStyle = (root, cssText) => {
+        if (!root || root.querySelector("style[data-meteocat-compact]")) return;
+        const style = document.createElement("style");
+        style.dataset.meteocatCompact = "true";
+        style.textContent = cssText;
+        root.appendChild(style);
+      };
+
+      const applyFormSpacing = () => {
+        addStyle(
+          form.shadowRoot,
+          `.root > *:not([own-margin]):not(:last-child) { margin-bottom: 8px; }
+           .root > *.meteocat-boolean-row:not([own-margin]):not(:last-child) { margin-bottom: 4px; }
+           .root > *:last-child { margin-bottom: 0; }`
+        );
+      };
+
+      const applyBooleanRow = (selector) => {
+        const apply = () => {
+          if (
+            !selector.selector ||
+            !Object.prototype.hasOwnProperty.call(selector.selector, "boolean")
+          ) {
+            return;
+          }
+
+          selector.classList.add("meteocat-boolean-row");
+          const booleanSelector = selector.shadowRoot?.querySelector("ha-selector-boolean");
+          if (!booleanSelector) return;
+
+          const applySwitchHeight = () => {
+            addStyle(booleanSelector.shadowRoot, `ha-switch { min-height: 40px; }`);
+          };
+
+          if (typeof booleanSelector.updateComplete?.then === "function") {
+            booleanSelector.updateComplete.then(applySwitchHeight).catch(() => {});
+          } else {
+            applySwitchHeight();
+          }
+        };
+
+        if (typeof selector.updateComplete?.then === "function") {
+          selector.updateComplete.then(apply).catch(() => {});
+        } else {
+          apply();
+        }
+      };
+
+      const apply = () => {
+        applyFormSpacing();
+        form.shadowRoot?.querySelectorAll("ha-selector").forEach(applyBooleanRow);
+      };
+
+      if (typeof form.updateComplete?.then === "function") {
+        form.updateComplete.then(() => {
+          apply();
+          if (typeof requestAnimationFrame === "function") requestAnimationFrame(apply);
+        }).catch(() => {});
+      } else {
+        apply();
+      }
+    } catch (err) {
+      console.debug("MeteocatCardEditor: compact form styles skipped", err);
+    }
+  }
+
   // ------------------------------
   // 🔹 Renderizado del formulario
   // ------------------------------
@@ -208,13 +276,13 @@ class MeteocatCardEditor extends HTMLElement {
       .section-label {
         font-size: var(--mc-general-label-font-size);
         font-weight: normal;
-        margin: 12px 0 4px;
-        padding-top: 8px;
+        margin: 8px 0 8px;
+        padding-top: 6px;
         border-top: 2px solid var(--divider-color, rgba(0,0,0,0.06));
         color: var(--primary-text-color);
       }
 
-      .group { margin-bottom: 4px; }
+      .group { margin-bottom: 2px; }
       .indented-form { margin-left: 16px; }
       .indented-form ha-formfield:not(:last-child) {
         margin-bottom: var(--mc-form-vertical-spacing);
@@ -406,6 +474,9 @@ class MeteocatCardEditor extends HTMLElement {
       );
 
       this.shadowRoot.appendChild(wrapper);
+      [generalForm, alertForm, sunForm, moonForm, etoForm].forEach((form) =>
+        this._compactEditorForm(form)
+      );
       this._form = { generalForm, alertForm, sunForm, moonForm, etoForm };
     } catch (err) {
       console.error("MeteocatCardEditor render error:", err);
