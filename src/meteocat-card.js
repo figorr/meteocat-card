@@ -39,6 +39,11 @@ const translations = {
     chart_min: "Min",
     chart_rain: "Rain",
     chart_rain_max: "max {value} mm",
+    chart_first_rain: "Start",
+    chart_go_max_temp: "Go to highest temperature",
+    chart_go_min_temp: "Go to lowest temperature",
+    chart_go_first_rain: "Go to first rain",
+    chart_go_max_rain: "Go to peak rain",
     today: "Today",
     tomorrow: "Tomorrow",
     no_forecast_data: "No forecast data available. Check entity or logs.",
@@ -230,6 +235,11 @@ const translations = {
     chart_min: "Mín",
     chart_rain: "Lluvia",
     chart_rain_max: "máx. {value} mm",
+    chart_first_rain: "Inicio",
+    chart_go_max_temp: "Ir a la temperatura máxima",
+    chart_go_min_temp: "Ir a la temperatura mínima",
+    chart_go_first_rain: "Ir a la primera lluvia",
+    chart_go_max_rain: "Ir a la lluvia máxima",
     today: "Hoy",
     tomorrow: "Mañana",
     no_forecast_data: "No hay datos de pronóstico disponibles. Verifica la entidad o los registros.",
@@ -421,6 +431,11 @@ const translations = {
     chart_min: "Mín",
     chart_rain: "Pluja",
     chart_rain_max: "màx. {value} mm",
+    chart_first_rain: "Inici",
+    chart_go_max_temp: "Anar a la temperatura màxima",
+    chart_go_min_temp: "Anar a la temperatura mínima",
+    chart_go_first_rain: "Anar a la primera pluja",
+    chart_go_max_rain: "Anar a la pluja màxima",
     today: "Avui",
     tomorrow: "Demà",
     no_forecast_data: "No hi ha dades de previsió disponibles. Comprova l'entitat o els registres.",
@@ -1190,6 +1205,7 @@ class MeteocatCard extends HTMLElement {
     const plotHeight = plotBottom - plotTop;
 
     const points = forecasts.map((forecast, index) => ({
+      index,
       x: index * FORECAST_ITEM_WIDTH + FORECAST_ITEM_CENTER,
       label: isDaily
         ? this._formatForecastDate(forecast.datetime)
@@ -1218,10 +1234,30 @@ class MeteocatCard extends HTMLElement {
 
     let maxPrecip = 0;
     let maxPrecipIndex = -1;
+    let maxTempIndex = -1;
+    let minTempIndex = -1;
+    let maxTempValue = -Infinity;
+    let minTempValue = Infinity;
+    let firstRainIndex = -1;
     points.forEach((point, index) => {
       if (point.precip !== null && point.precip > maxPrecip) {
         maxPrecip = point.precip;
         maxPrecipIndex = index;
+      }
+
+      if (point.temp !== null && point.temp > maxTempValue) {
+        maxTempValue = point.temp;
+        maxTempIndex = index;
+      }
+
+      const lowValue = isDaily ? point.templow : point.temp;
+      if (lowValue !== null && lowValue < minTempValue) {
+        minTempValue = lowValue;
+        minTempIndex = index;
+      }
+
+      if (!isDaily && firstRainIndex === -1 && point.precip !== null && point.precip > 0) {
+        firstRainIndex = index;
       }
     });
     const barMaxHeight = isDaily ? 0 : rainLaneHeight;
@@ -1259,7 +1295,8 @@ class MeteocatCard extends HTMLElement {
       ? points
           .map((point) => {
             if (point.precip === null || point.precip <= 0) return "";
-            return `<g class="chart-rain-value"><rect x="${(point.x - rainBadgeWidth / 2).toFixed(1)}" y="${rainBadgeY.toFixed(1)}" width="${rainBadgeWidth}" height="${rainBadgeHeight}" rx="4" class="chart-rain-value-bg"></rect><text x="${point.x.toFixed(1)}" y="${(rainBadgeY + rainBadgeHeight / 2).toFixed(1)}" text-anchor="middle" dominant-baseline="central" class="chart-rain-value-label">${this._formatNumber(point.precip, 1)} mm</text></g>`;
+            const isPeakRain = point.index === maxPrecipIndex;
+            return `<g class="chart-rain-value${isPeakRain ? " chart-rain-value--peak" : ""}"><rect x="${(point.x - rainBadgeWidth / 2).toFixed(1)}" y="${rainBadgeY.toFixed(1)}" width="${rainBadgeWidth}" height="${rainBadgeHeight}" rx="4" class="chart-rain-value-bg"></rect><text x="${point.x.toFixed(1)}" y="${(rainBadgeY + rainBadgeHeight / 2).toFixed(1)}" text-anchor="middle" dominant-baseline="central" class="chart-rain-value-label">${this._formatNumber(point.precip, 1)} mm</text></g>`;
           })
           .join("")
       : "";
@@ -1282,8 +1319,12 @@ class MeteocatCard extends HTMLElement {
     const badgeRadius = 13;
     const badgeY = (value) => Math.max(badgeRadius + 1, Math.min(plotBottom, yForTemp(value)));
     const valueBadge = (point, value, className) => {
+      const isPeak = isDaily
+        ? (className === "chart-value-max" && point.index === maxTempIndex)
+          || (className === "chart-value-min" && point.index === minTempIndex)
+        : point.index === maxTempIndex || point.index === minTempIndex;
       const cy = badgeY(value);
-      return `<g class="chart-value ${className}"><circle cx="${point.x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${badgeRadius}" class="chart-value-circle"></circle><text x="${point.x.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" class="chart-value-label">${this._formatNumber(value, 1)}°</text></g>`;
+      return `<g class="chart-value ${className}${isPeak ? " chart-value--peak" : ""}"><circle cx="${point.x.toFixed(1)}" cy="${cy.toFixed(1)}" r="${badgeRadius}" class="chart-value-circle"></circle><text x="${point.x.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" class="chart-value-label">${this._formatNumber(value, 1)}°</text></g>`;
     };
     const valueBadges = [
       ...tempPoints.map((point) => valueBadge(point, point.temp, "chart-value-max")),
@@ -1303,12 +1344,40 @@ class MeteocatCard extends HTMLElement {
       .map((tick) => `<span style="top:${((tick.y / height) * 100).toFixed(2)}%">${Math.round(tick.value)}</span>`)
       .join("");
 
-    const rainLegend = maxPrecip > 0
-      ? `<button type="button" class="chart-legend-item chart-legend-action" data-rain-index="${maxPrecipIndex}"><span class="chart-legend-bar"></span>${getTranslation(this._hass, "chart_rain")} (${getTranslation(this._hass, "chart_rain_max", { value: this._formatNumber(maxPrecip) })})</button>`
+    const legendButton = (label, actionLabel, markerClass, targetIndex, markerType = "line") => {
+      if (!Number.isInteger(targetIndex) || targetIndex < 0) return "";
+      const marker = markerType === "bar"
+        ? `<span class="chart-legend-bar"></span>`
+        : `<span class="chart-legend-line ${markerClass}"></span>`;
+      return `<button type="button" class="chart-legend-item chart-legend-action" data-chart-index="${targetIndex}" title="${actionLabel}" aria-label="${actionLabel}">${marker}${label}</button>`;
+    };
+
+    const legendAction = (label, actionLabel, targetIndex) => {
+      if (!Number.isInteger(targetIndex) || targetIndex < 0) return "";
+      return `<button type="button" class="chart-legend-action" data-chart-index="${targetIndex}" title="${actionLabel}" aria-label="${actionLabel}">${label}</button>`;
+    };
+
+    const maxTempAction = getTranslation(this._hass, "chart_go_max_temp");
+    const minTempAction = getTranslation(this._hass, "chart_go_min_temp");
+    const firstRainAction = getTranslation(this._hass, "chart_go_first_rain");
+    const maxRainAction = getTranslation(this._hass, "chart_go_max_rain");
+
+    const dailyLegend = `${legendButton(getTranslation(this._hass, "chart_max"), maxTempAction, "chart-legend-max", maxTempIndex)}${legendButton(getTranslation(this._hass, "chart_min"), minTempAction, "chart-legend-min", minTempIndex)}`;
+    const tempActions = [
+      legendAction(getTranslation(this._hass, "chart_max"), maxTempAction, maxTempIndex),
+      legendAction(getTranslation(this._hass, "chart_min"), minTempAction, minTempIndex),
+    ].filter(Boolean);
+    const rainActions = [
+      legendAction(getTranslation(this._hass, "chart_first_rain"), firstRainAction, firstRainIndex),
+      legendAction(getTranslation(this._hass, "chart_max"), maxRainAction, maxPrecipIndex),
+    ].filter(Boolean);
+    const tempGroup = tempActions.length
+      ? `<span class="chart-legend-item chart-legend-group"><span class="chart-legend-line chart-legend-temp"></span><span>${getTranslation(this._hass, "chart_temperature")}</span><span class="chart-legend-subactions">${tempActions.join('<span class="chart-legend-separator">/</span>')}</span></span>`
       : "";
-    const legend = isDaily
-      ? `<span class="chart-legend-item"><span class="chart-legend-line chart-legend-max"></span>${getTranslation(this._hass, "chart_max")}</span><span class="chart-legend-item"><span class="chart-legend-line chart-legend-min"></span>${getTranslation(this._hass, "chart_min")}</span>`
-      : `<span class="chart-legend-item"><span class="chart-legend-line chart-legend-temp"></span>${getTranslation(this._hass, "chart_temperature")}</span>${rainLegend}`;
+    const rainGroup = rainActions.length
+      ? `<span class="chart-legend-item chart-legend-group"><span class="chart-legend-bar"></span><span>${getTranslation(this._hass, "chart_rain")}</span><span class="chart-legend-subactions">${rainActions.join('<span class="chart-legend-separator">/</span>')}</span></span>`
+      : "";
+    const legend = isDaily ? dailyLegend : `${tempGroup}${rainGroup}`;
 
     const viewportWidth = this.visibleItems * FORECAST_ITEM_WIDTH - 8;
     return `
@@ -1976,10 +2045,16 @@ class MeteocatCard extends HTMLElement {
             .chart-block { --mc-chart-max: var(--warning-color, #ef6c00); --mc-chart-min: var(--info-color, #1e88e5); --mc-chart-temp: var(--warning-color, #ef6c00); --mc-chart-rain: var(--primary-color, #2196f3); margin: 4px 0 6px; }
             .chart-header { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-bottom: 4px; font-family: sans-serif; }
             .chart-title { font-size: 0.95em; font-weight: 500; }
-            .chart-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--secondary-text-color); font-size: 0.78em; }
+            .chart-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; color: var(--secondary-text-color); font-size: 0.74em; }
             .chart-legend-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
-            .chart-legend-action { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
-            .chart-legend-action:hover { color: var(--primary-text-color); }
+            .chart-legend-group { gap: 3px; }
+            .chart-legend-subactions { display: inline-flex; align-items: center; gap: 2px; }
+            .chart-legend-subactions::before { content: "("; }
+            .chart-legend-subactions::after { content: ")"; }
+            .chart-legend-subactions .chart-legend-action { padding: 0 2px; }
+            .chart-legend-separator { color: var(--secondary-text-color); opacity: 0.65; }
+            .chart-legend-action { padding: 1px 4px; border: 0; border-radius: 4px; background: none; color: inherit; font: inherit; cursor: pointer; }
+            .chart-legend-action:hover { color: var(--primary-text-color); background: var(--secondary-background-color, rgba(127, 127, 127, 0.12)); }
             .chart-legend-action:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
             .chart-legend-line { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
             .chart-legend-max, .chart-legend-temp { background: var(--mc-chart-max); }
@@ -1996,6 +2071,9 @@ class MeteocatCard extends HTMLElement {
             .chart-temp-line { fill: none; stroke: var(--mc-chart-max); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
             .chart-temp-low-line { fill: none; stroke: var(--mc-chart-min); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
             .chart-temp-band { fill: var(--mc-chart-max); opacity: 0.12; }
+            .chart-value, .chart-rain-value { transform-box: fill-box; transform-origin: center; transition: transform 0.2s ease; }
+            .chart-value--peak { transform: scale(1.25); }
+            .chart-rain-value--peak { transform: scale(1.15); }
             .chart-value-circle { fill: var(--ha-card-background, var(--card-background-color, #fff)); stroke: var(--mc-chart-max); stroke-width: 1.5; }
             .chart-value-label { fill: var(--mc-chart-max); font-size: 9px; font-weight: 600; font-family: sans-serif; }
             .chart-value-min .chart-value-circle { stroke: var(--mc-chart-min); }
@@ -2206,16 +2284,15 @@ class MeteocatCard extends HTMLElement {
       }
     };
 
-    const rainLegend = this.shadowRoot.querySelector('.chart-legend-action');
-    if (rainLegend) {
-      rainLegend.onclick = () => {
-        const rainIndex = Number(rainLegend.dataset.rainIndex);
-        if (!Number.isInteger(rainIndex) || rainIndex < 0 || maxSlides <= 0) return;
+    this.shadowRoot.querySelectorAll('.chart-legend-action').forEach((legendAction) => {
+      legendAction.onclick = () => {
+        const targetIndex = Number(legendAction.dataset.chartIndex);
+        if (!Number.isInteger(targetIndex) || targetIndex < 0 || maxSlides <= 0) return;
         const centerOffset = Math.floor((this.visibleItems - 1) / 2);
-        const targetSlide = Math.max(0, Math.min(maxSlides, rainIndex - centerOffset));
+        const targetSlide = Math.max(0, Math.min(maxSlides, targetIndex - centerOffset));
         updateSliderPosition((targetSlide / maxSlides) * 100);
       };
-    }
+    });
 
     // Eventos para el slider-bar
     const onBarPointerDown = (event) => {

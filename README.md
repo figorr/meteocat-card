@@ -272,6 +272,8 @@ Set `option_show_chart: true` to display a trend chart below the forecast cards 
 - **Daily view:** maximum and minimum temperature lines.
 - **Hourly view:** temperature line and precipitation bars in mm for the next 72 hours.
 
+The legend entries are interactive. In the daily view, **Max** and **Min** scroll to the day with the highest maximum or lowest minimum temperature. In the hourly view, the temperature group exposes **Max** and **Min** actions, and the rain group exposes **Start** and **Max** actions. The chart and forecast cards move together to the selected position. Only the circle for the highest maximum temperature and the circle for the lowest minimum temperature are enlarged; the rest keep their normal size, and the buttons only scroll to the relevant point. The peak rain badge and value are also enlarged. The actions inside the hourly legend are separated with a slash.
+
 ## Notes
 
 - Make sure your Meteocat integration provides a Weather entity (not just individual sensors) to get full card functionality.
