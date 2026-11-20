@@ -75,6 +75,9 @@ const translations = {
     umbral: "Threshold",
     peligro: "Danger",
     nivel: "Level",
+    source: "Source",
+    source_api: "API",
+    source_public: "Public feed",
     attribution: "Powered by Meteocatpy & Solarmoonpy",
     sun: "Sun",
     mon: "Mon",
@@ -271,6 +274,9 @@ const translations = {
     umbral: "Umbral",
     peligro: "Peligro",
     nivel: "Nivel",
+    source: "Origen",
+    source_api: "API",
+    source_public: "Feed público",
     attribution: "Powered by Meteocatpy & Solarmoonpy",
     sun: "Dom",
     mon: "Lun",
@@ -467,6 +473,9 @@ const translations = {
     umbral: "Llindar",
     peligro: "Perill",
     nivel: "Nivell",
+    source: "Origen",
+    source_api: "API",
+    source_public: "Feed públic",
     attribution: "Powered by Meteocatpy & Solarmoonpy",
     sun: "Dg",
     mon: "Dl",
@@ -607,6 +616,12 @@ function getThresholdTranslation(hass, alertKey, thresholdValue, fallback = thre
   const lang = hass?.language || 'en';
   const thresholdTranslations = translations[lang]?.threshold?.[alertKey] || translations.en.threshold[alertKey] || {};
   return thresholdTranslations[thresholdValue] || fallback;
+}
+
+function getAlertSourceLabel(hass, source) {
+  if (source === "public") return getTranslation(hass, "source_public");
+  if (source === "api") return getTranslation(hass, "source_api");
+  return source || getTranslation(hass, "unknown");
 }
 
 // Helper para obtener el color y la etiqueta de la escala SMP segun el grado de peligro
@@ -1806,14 +1821,16 @@ class MeteocatCard extends HTMLElement {
           const danger = Number.parseInt(attrs.peligro, 10);
 
           let attrDetails = '';
-          const attrKeys = ["inicio", "fin", "fecha", "periodo", "comentario", "umbral", "peligro", "nivel"];
+          const attrKeys = ["inicio", "fin", "fecha", "periodo", "source", "comentario", "umbral", "peligro", "nivel"];
           attrKeys.forEach(attrKey => {
             if (attrs[attrKey] !== undefined && attrs[attrKey] !== null) {
-              const displayValue = attrKey === "umbral"
-                ? getThresholdTranslation(this._hass, key, attrs[attrKey], attrs[attrKey])
-                : (attrKey === "inicio" || attrKey === "fin")
-                  ? this._formatTimestamp(attrs[attrKey])
-                  : attrs[attrKey];
+              const displayValue = attrKey === "source"
+                ? getAlertSourceLabel(this._hass, attrs[attrKey])
+                : attrKey === "umbral"
+                  ? getThresholdTranslation(this._hass, key, attrs[attrKey], attrs[attrKey])
+                  : (attrKey === "inicio" || attrKey === "fin")
+                    ? this._formatTimestamp(attrs[attrKey])
+                    : attrs[attrKey];
               attrDetails += `<div class="alert-attr"><span class="alert-attr-name">${getTranslation(this._hass, attrKey)}:</span> <span class="alert-attr-value">${displayValue}</span></div>`;
             }
           });
