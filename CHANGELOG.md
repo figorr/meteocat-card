@@ -1,3 +1,10 @@
+# [3.5.0](https://github.com/figorr/meteocat-card/compare/v3.4.0...v3.5.0) (2026-11-20)
+
+
+### Features
+
+* show alert data source ([4006889](https://github.com/figorr/meteocat-card/commit/40068891a98dc3432f5addcf80635f0091e42b8c))
+
 # [3.4.0](https://github.com/figorr/meteocat-card/compare/v3.3.0...v3.4.0) (2026-11-18)
 
 
