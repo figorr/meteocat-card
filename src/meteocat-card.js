@@ -1907,8 +1907,7 @@ class MeteocatCard extends HTMLElement {
                   if (start) {
                     rightLines.push(`<span>${getTranslation(this._hass, 'from', { value: start })}</span>`);
                   }
-                }
-                if (expiry) {
+                } else if (expiry) {
                   rightLines.push(`<span>${getTranslation(this._hass, 'until', { value: expiry })}</span>`);
                 }
                 const rightInfoHtml = rightLines.length
@@ -2156,8 +2155,8 @@ class MeteocatCard extends HTMLElement {
             .alert-badge ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; color: var(--alert-badge-color, #ffffff); }
             .alert-badge-name { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow-wrap: break-word; }
             .alert-badge-level { flex: 0 0 auto; font-weight: 600; }
-            .alert-badge-upcoming { align-self: flex-end; padding: 1px 5px; border: 1px solid currentColor; border-radius: 999px; font-size: 0.72em; font-weight: 600; letter-spacing: 0.03em; opacity: 0.8; text-transform: uppercase; }
-            .alert-badge-dates { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; margin-left: 6px; font-size: 0.82em; font-weight: 400; opacity: 0.72; white-space: nowrap; }
+            .alert-badge-upcoming { align-self: flex-end; padding: 2px 7px; border: 1px solid currentColor; border-radius: 999px; font-size: 0.95em; font-weight: 600; letter-spacing: 0.03em; opacity: 0.85; text-transform: uppercase; }
+            .alert-badge-dates { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; margin-left: 6px; font-size: 0.82em; font-weight: 400; line-height: 1.2; opacity: 0.72; white-space: nowrap; }
             .alerts-details { margin-top: 8px; border-top: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12)); padding-top: 4px; }
             .alerts-details-summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; cursor: pointer; list-style: none; font-size: 1.15em; font-weight: 700; font-family: sans-serif; color: var(--primary-text-color); }
             .alerts-details-summary::-webkit-details-marker { display: none; }
