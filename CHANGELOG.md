@@ -1,3 +1,10 @@
+## [3.7.1](https://github.com/figorr/meteocat-card/compare/v3.7.0...v3.7.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* refine alert badge alignment and level colors ([a28aa34](https://github.com/figorr/meteocat-card/commit/a28aa34599d938225ebe2ab869b1b7f1f79dc764))
+
 # [3.7.0](https://github.com/figorr/meteocat-card/compare/v3.6.0...v3.7.0) (2026-11-21)
 
 
