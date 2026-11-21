@@ -651,9 +651,9 @@ function getAlertLevelMeta(hass, danger) {
   if (level <= 4) {
     return {
       key: "high",
-      color: "#b45309",
-      background: "#ffd1a3",
-      textColor: "#6b3b00",
+      color: "#c2410c",
+      background: "#ffd08a",
+      textColor: "#4a1f00",
       label: getTranslation(hass, "alert_level_high"),
     };
   }
@@ -2164,9 +2164,9 @@ class MeteocatCard extends HTMLElement {
             .alert-badge ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; color: var(--alert-badge-color, #ffffff); }
             .alert-badge-name { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow-wrap: break-word; }
             .alert-badge-level { flex: 0 0 auto; font-weight: 600; }
-            .alert-badge-state { align-self: flex-end; padding: 2px 8px; border: 2px solid var(--alert-badge-color); border-radius: 999px; color: var(--alert-badge-fg); font-size: 0.95em; font-weight: 600; letter-spacing: 0.03em; opacity: 1; text-transform: uppercase; }
-            .alert-badge-dates { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; margin-left: 6px; font-size: 0.82em; font-weight: 400; line-height: 1.2; opacity: 1; white-space: nowrap; }
-            .alert-badge-dates > span:not(.alert-badge-state) { opacity: 0.72; }
+            .alert-badge-state { align-self: flex-start; padding: 2px 8px; border: 2px solid var(--alert-badge-color); border-radius: 999px; color: var(--alert-badge-fg); font-size: 0.95em; font-weight: 600; letter-spacing: 0.03em; opacity: 1; text-transform: uppercase; }
+            .alert-badge-dates { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; margin-left: 6px; font-size: 0.82em; font-weight: 400; line-height: 1.2; opacity: 1; white-space: nowrap; }
+            .alert-badge-dates > span:not(.alert-badge-state) { padding-left: 8px; opacity: 0.72; }
             .alerts-details { margin-top: 8px; border-top: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12)); padding-top: 4px; }
             .alerts-details-summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; cursor: pointer; list-style: none; font-size: 1.15em; font-weight: 700; font-family: sans-serif; color: var(--primary-text-color); }
             .alerts-details-summary::-webkit-details-marker { display: none; }
