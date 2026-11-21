@@ -394,6 +394,10 @@ fade_duration: 0.3
 
 ![Meteocat Card daily forecast without alerts](images/daily_forecast_no_alerts.png)
 
+![Meteocat Card daily forecast with one alert](images/daily_forecast_1_alert.png)
+
+![Meteocat Card daily forecast with three alerts](images/daily_forecast_3_alerts.png)
+
 #### Hourly Forecast:
 
 ![Meteocat Card hourly forecast without alerts](images/houryly_forecast_no_alerts.png)
