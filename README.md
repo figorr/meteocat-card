@@ -262,7 +262,7 @@ When Meteocat reports alerts, the card displays one full-width row for each aler
 
 ![Meteocat Card alert badges](images/alerts_badges.png)
 
-Clicking or keyboard-activating a row opens the alert details section and scrolls to the matching alert, which is highlighted with the same background color as its badge.
+Clicking or keyboard-activating a row opens the alert details section and scrolls to the matching alert, which is highlighted with the same background color as its badge. The detail header also shows the alert level as a colored pill.
 
 ![Meteocat Card alert details](images/alerts_details.png)
 

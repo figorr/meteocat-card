@@ -1862,7 +1862,10 @@ class MeteocatCard extends HTMLElement {
             sortIndex: alertKeys.indexOf(key),
             detailHtml: `
               <div class="alert-detail-item${this._alertsExpanded && this._selectedAlertKey === key ? " alert-detail-item--highlighted" : ""}" data-alert-key="${key}" id="alert-detail-${key}" tabindex="-1" style="--alert-detail-bg: ${levelMeta.background}; --alert-detail-fg: ${levelMeta.textColor};">
-                <div class="alert-name">${alertMap[key]}</div>
+                <div class="alert-detail-header">
+                  <div class="alert-name">${alertMap[key]}</div>
+                  <span class="alert-detail-level" style="--alert-detail-level-color: ${levelMeta.color}; --alert-detail-level-bg: ${levelMeta.background}; --alert-detail-level-fg: ${levelMeta.textColor};">${levelMeta.label}</span>
+                </div>
                 ${attrDetails}
               </div>
             `
@@ -2170,7 +2173,9 @@ class MeteocatCard extends HTMLElement {
             .alerts-details-content { padding-top: 4px; }
             .alert-detail-item { margin-bottom: 10px; padding: 6px 8px; border-radius: 6px; outline: none; transition: background-color 0.2s ease, color 0.2s ease; }
             .alert-detail-item--highlighted { background-color: var(--alert-detail-bg, var(--secondary-background-color, rgba(127, 127, 127, 0.12))); color: var(--alert-detail-fg, var(--primary-text-color)); }
+            .alert-detail-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
             .alert-name { font-weight: bold; font-size: 1.0em; text-decoration: underline; font-family: sans-serif; }
+            .alert-detail-level { flex: 0 0 auto; padding: 1px 7px; border: 1px solid var(--alert-detail-level-color); border-radius: 999px; background: var(--alert-detail-level-bg); color: var(--alert-detail-level-fg); font-size: 0.78em; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; }
             .alert-attr { font-size: 0.9em; color: var(--secondary-text-color); font-family: sans-serif; }
             .alert-detail-item--highlighted .alert-attr { color: var(--alert-detail-fg, var(--secondary-text-color)); opacity: 0.82; }
             .alert-attr-name { font-weight: bold; }
