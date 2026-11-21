@@ -258,7 +258,7 @@ With `option_detail_tap_more_info: true` (default), current metrics, temperature
 
 ### Alert badges and collapsed details
 
-When Meteocat reports active alerts, the card displays one full-width row for each alert type. Each row uses a warm solid variation of the official SMP danger color based on the `peligro` attribute: moderate (`1-2`, yellow), high (`3-4`, orange), and very high (`5-6`, red). The color is applied to the left border and icon, with a matching light background and high-contrast text. The row also includes the alert type, a text level, and the end time when available, so the severity is not conveyed by color alone and long alert names have room to wrap. Rows are ordered by expiry time, soonest first; if two alerts expire at the same time, the higher danger level is shown first.
+When Meteocat reports alerts, the card displays one full-width row for each alert type. Each row uses a warm solid variation of the official SMP danger color based on the `peligro` attribute: moderate (`1-2`, yellow), high (`3-4`, orange), and very high (`5-6`, red). The color is applied to the left border and icon, with a matching light background and high-contrast text. The row also includes the alert type, a text level, and the start and end times when available, so the severity is not conveyed by color alone and long alert names have room to wrap. Future alerts show an **Upcoming** label so they are not mistaken for currently active alerts. Rows are ordered by expiry time, soonest first; if two alerts expire at the same time, the higher danger level is shown first.
 
 ![Meteocat Card alert badges](images/alerts_badges.png)
 
@@ -404,7 +404,7 @@ fade_duration: 0.3
 - ✅ Shows a weather icon according to the condition and time of day
 - ✅ Supports animated (a-) or static (s-) icons
 - ✅ Displays hourly and daily forecasts when using a Weather entity
-- ✅ Shows full-width SMP alert rows with expiry, sorting, and click-to-details highlighting
+- ✅ Shows full-width SMP alert rows with start/end times, upcoming status, sorting, and click-to-details highlighting
 - 🚧 Lightweight and compatible with Home Assistant 2025+
 - 🛠️ Early stage — more features will be added (styling, additional forecasts, etc.)
 
