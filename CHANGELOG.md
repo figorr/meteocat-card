@@ -1,3 +1,11 @@
+# [3.7.0](https://github.com/figorr/meteocat-card/compare/v3.6.0...v3.7.0) (2026-11-21)
+
+
+### Features
+
+* show alert level in details ([6c4fb4d](https://github.com/figorr/meteocat-card/commit/6c4fb4d5d90672c1b34716ae684268e71bd093bb))
+* show ends state on active alert badges ([6a3941c](https://github.com/figorr/meteocat-card/commit/6a3941c571a07bb48ee4d35e6b2adc5ec89d6cf2))
+
 # [3.6.0](https://github.com/figorr/meteocat-card/compare/v3.5.0...v3.6.0) (2026-11-21)
 
 
