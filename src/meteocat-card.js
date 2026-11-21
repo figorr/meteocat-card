@@ -1899,25 +1899,27 @@ class MeteocatCard extends HTMLElement {
           alertsHtml += `
             <div class="alerts-badges">
               ${activeAlerts.map(({ key, name, icon, levelMeta, start, expiry, isUpcoming }) => {
-                const dateLines = [];
-                if (start) {
-                  dateLines.push(getTranslation(this._hass, 'from', { value: start }));
-                }
-                if (expiry) {
-                  dateLines.push(getTranslation(this._hass, 'until', { value: expiry }));
-                }
-                const datesHtml = dateLines.length
-                  ? `<span class="alert-badge-dates">${dateLines.map((line) => `<span>${line}</span>`).join("")}</span>`
-                  : "";
                 const upcomingLabel = getTranslation(this._hass, 'upcoming');
                 const statusLabel = isUpcoming ? `${upcomingLabel} - ${levelMeta.label}` : levelMeta.label;
+                const rightLines = [];
+                if (isUpcoming) {
+                  rightLines.push(`<span class="alert-badge-upcoming">${upcomingLabel}</span>`);
+                  if (start) {
+                    rightLines.push(`<span>${getTranslation(this._hass, 'from', { value: start })}</span>`);
+                  }
+                }
+                if (expiry) {
+                  rightLines.push(`<span>${getTranslation(this._hass, 'until', { value: expiry })}</span>`);
+                }
+                const rightInfoHtml = rightLines.length
+                  ? `<span class="alert-badge-dates">${rightLines.join("")}</span>`
+                  : "";
                 return `
                   <button type="button" class="alert-badge alert-badge--${levelMeta.key}" data-alert-key="${key}" aria-controls="alert-detail-${key}" style="--alert-badge-color: ${levelMeta.color}; --alert-badge-bg: ${levelMeta.background}; --alert-badge-fg: ${levelMeta.textColor};" title="${name}: ${statusLabel}" aria-label="${name}: ${statusLabel}">
                     <ha-icon icon="${icon}"></ha-icon>
                     <span class="alert-badge-name">${name}</span>
-                    ${isUpcoming ? `<span class="alert-badge-upcoming">${upcomingLabel}</span>` : ''}
                     <span class="alert-badge-level">${levelMeta.label}</span>
-                    ${datesHtml}
+                    ${rightInfoHtml}
                   </button>
                 `;
               }).join("")}
@@ -2154,7 +2156,7 @@ class MeteocatCard extends HTMLElement {
             .alert-badge ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; color: var(--alert-badge-color, #ffffff); }
             .alert-badge-name { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow-wrap: break-word; }
             .alert-badge-level { flex: 0 0 auto; font-weight: 600; }
-            .alert-badge-upcoming { flex: 0 0 auto; padding: 1px 5px; border: 1px solid currentColor; border-radius: 999px; font-size: 0.72em; font-weight: 600; letter-spacing: 0.03em; opacity: 0.8; text-transform: uppercase; }
+            .alert-badge-upcoming { align-self: flex-end; padding: 1px 5px; border: 1px solid currentColor; border-radius: 999px; font-size: 0.72em; font-weight: 600; letter-spacing: 0.03em; opacity: 0.8; text-transform: uppercase; }
             .alert-badge-dates { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; margin-left: 6px; font-size: 0.82em; font-weight: 400; opacity: 0.72; white-space: nowrap; }
             .alerts-details { margin-top: 8px; border-top: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12)); padding-top: 4px; }
             .alerts-details-summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; cursor: pointer; list-style: none; font-size: 1.15em; font-weight: 700; font-family: sans-serif; color: var(--primary-text-color); }
