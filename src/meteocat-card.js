@@ -1817,28 +1817,35 @@ class MeteocatCard extends HTMLElement {
 
           const attrs = specific.attributes ?? {};
           const levelMeta = getAlertLevelMeta(this._hass, attrs.peligro);
-          const expiryTs = attrs.fin && isFinite(new Date(attrs.fin).getTime())
-            ? new Date(attrs.fin).getTime()
+          const startValue = attrs.inicio_comarca ?? attrs.inicio;
+          const endValue = attrs.fin_comarca ?? attrs.fin;
+          const expiryTs = endValue && isFinite(new Date(endValue).getTime())
+            ? new Date(endValue).getTime()
             : Number.POSITIVE_INFINITY;
-          const startTs = attrs.inicio && isFinite(new Date(attrs.inicio).getTime())
-            ? new Date(attrs.inicio).getTime()
+          const startTs = startValue && isFinite(new Date(startValue).getTime())
+            ? new Date(startValue).getTime()
             : null;
-          const expiry = Number.isFinite(expiryTs) ? this._formatTimestamp(attrs.fin) : "";
-          const start = startTs !== null ? this._formatTimestamp(attrs.inicio) : "";
+          const expiry = Number.isFinite(expiryTs) ? this._formatTimestamp(endValue) : "";
+          const start = startTs !== null ? this._formatTimestamp(startValue) : "";
           const isUpcoming = startTs !== null && startTs > Date.now();
           const danger = Number.parseInt(attrs.peligro, 10);
 
           let attrDetails = '';
           const attrKeys = ["inicio", "fin", "fecha", "periodo", "source", "comentario", "umbral", "peligro", "nivel"];
           attrKeys.forEach(attrKey => {
-            if (attrs[attrKey] !== undefined && attrs[attrKey] !== null) {
+            const attrValue = attrKey === "inicio"
+              ? (attrs.inicio_comarca ?? attrs.inicio)
+              : attrKey === "fin"
+                ? (attrs.fin_comarca ?? attrs.fin)
+                : attrs[attrKey];
+            if (attrValue !== undefined && attrValue !== null) {
               const displayValue = attrKey === "source"
-                ? getAlertSourceLabel(this._hass, attrs[attrKey])
+                ? getAlertSourceLabel(this._hass, attrValue)
                 : attrKey === "umbral"
-                  ? getThresholdTranslation(this._hass, key, attrs[attrKey], attrs[attrKey])
+                  ? getThresholdTranslation(this._hass, key, attrValue, attrValue)
                   : (attrKey === "inicio" || attrKey === "fin")
-                    ? this._formatTimestamp(attrs[attrKey])
-                    : attrs[attrKey];
+                    ? this._formatTimestamp(attrValue)
+                    : attrValue;
               attrDetails += `<div class="alert-attr"><span class="alert-attr-name">${getTranslation(this._hass, attrKey)}:</span> <span class="alert-attr-value">${displayValue}</span></div>`;
             }
           });
