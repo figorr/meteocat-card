@@ -1,3 +1,12 @@
+# [3.6.0](https://github.com/figorr/meteocat-card/compare/v3.5.0...v3.6.0) (2026-11-21)
+
+
+### Features
+
+* refine upcoming alert badge layout ([9c69f24](https://github.com/figorr/meteocat-card/commit/9c69f24394d50f81a11b820a355960179eb8bf74))
+* show alert start and upcoming status ([4cd516d](https://github.com/figorr/meteocat-card/commit/4cd516d646839551cd72c06c305834e34bf9e8f7))
+* use regional alert windows in badges ([e75c315](https://github.com/figorr/meteocat-card/commit/e75c315262400e4742fefa4060d4dae7460d82d6))
+
 # [3.5.0](https://github.com/figorr/meteocat-card/compare/v3.4.0...v3.5.0) (2026-11-20)
 
 
