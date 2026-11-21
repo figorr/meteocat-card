@@ -2162,7 +2162,7 @@ class MeteocatCard extends HTMLElement {
             .alert-badge ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; color: var(--alert-badge-color, #ffffff); }
             .alert-badge-name { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow-wrap: break-word; }
             .alert-badge-level { flex: 0 0 auto; font-weight: 600; }
-            .alert-badge-upcoming { align-self: flex-end; padding: 2px 8px; border: 2px solid currentColor; border-radius: 999px; color: var(--alert-badge-color); font-size: 0.95em; font-weight: 600; letter-spacing: 0.03em; opacity: 1; text-transform: uppercase; }
+            .alert-badge-upcoming { align-self: flex-end; padding: 2px 8px; border: 2px solid var(--alert-badge-color); border-radius: 999px; color: var(--alert-badge-fg); font-size: 0.95em; font-weight: 600; letter-spacing: 0.03em; opacity: 1; text-transform: uppercase; }
             .alert-badge-dates { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; margin-left: 6px; font-size: 0.82em; font-weight: 400; line-height: 1.2; opacity: 1; white-space: nowrap; }
             .alert-badge-dates > span:not(.alert-badge-upcoming) { opacity: 0.72; }
             .alerts-details { margin-top: 8px; border-top: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12)); padding-top: 4px; }
