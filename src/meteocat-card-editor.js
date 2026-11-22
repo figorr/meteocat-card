@@ -27,6 +27,7 @@ const translations = {
     alert_options: "Alert options",
     option_show_alert_badges: "Alert level badges",
     option_alert_details_collapsed: "Collapse alert details by default",
+    option_highlight_alert_details: "Highlight alert details in color",
   },
   es: {
     title_default: "Meteocat",
@@ -55,6 +56,7 @@ const translations = {
     alert_options: "Opciones de alertas",
     option_show_alert_badges: "Indicadores de nivel de alerta",
     option_alert_details_collapsed: "Contraer detalles de alertas por defecto",
+    option_highlight_alert_details: "Resaltar detalles de alertas en color",
   },
   ca: {
     title_default: "Meteocat",
@@ -83,6 +85,7 @@ const translations = {
     alert_options: "Opcions d'alertes",
     option_show_alert_badges: "Indicadors de nivell d'alerta",
     option_alert_details_collapsed: "Replegar detalls d'alertes per defecte",
+    option_highlight_alert_details: "Ressaltar detalls d'alertes en color",
   },
 };
 
@@ -154,6 +157,7 @@ class MeteocatCardEditor extends HTMLElement {
       option_detail_tap_more_info: true,
       option_show_alert_badges: true,
       option_alert_details_collapsed: true,
+      option_highlight_alert_details: false,
       debug: false,
       ...config,
     };
@@ -384,10 +388,12 @@ class MeteocatCardEditor extends HTMLElement {
         {
           option_show_alert_badges: this._config.option_show_alert_badges,
           option_alert_details_collapsed: this._config.option_alert_details_collapsed,
+          option_highlight_alert_details: this._config.option_highlight_alert_details,
         },
         [
           { name: "option_show_alert_badges", selector: { boolean: {} } },
           { name: "option_alert_details_collapsed", selector: { boolean: {} } },
+          { name: "option_highlight_alert_details", selector: { boolean: {} } },
         ],
         "indented-form"
       );

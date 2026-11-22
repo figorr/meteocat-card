@@ -805,6 +805,15 @@ class MeteocatCard extends HTMLElement {
     const target = this.shadowRoot.querySelector(`.alert-detail-item[data-alert-key="${alertKey}"]`);
     if (!target) return;
 
+    const highlightAll = this._config.option_highlight_alert_details === true;
+
+    if (details?.open && highlightAll) {
+      details.open = false;
+      this._alertsExpanded = false;
+      this._selectedAlertKey = null;
+      return;
+    }
+
     if (details?.open && this._selectedAlertKey === alertKey) {
       details.open = false;
       this._alertsExpanded = false;
@@ -816,8 +825,15 @@ class MeteocatCard extends HTMLElement {
     }
 
     this._alertsExpanded = true;
-    this._selectedAlertKey = alertKey;
+    this._selectedAlertKey = highlightAll ? null : alertKey;
     if (details) details.open = true;
+    if (highlightAll) {
+      requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        target.focus({ preventScroll: true });
+      });
+      return;
+    }
 
     this.shadowRoot.querySelectorAll('.alert-detail-item--highlighted').forEach((item) => {
       item.classList.remove('alert-detail-item--highlighted');
@@ -875,6 +891,7 @@ class MeteocatCard extends HTMLElement {
       option_detail_tap_more_info: true,
       option_show_alert_badges: true,
       option_alert_details_collapsed: true,
+      option_highlight_alert_details: false,
     };
   }
 
@@ -896,6 +913,7 @@ class MeteocatCard extends HTMLElement {
       option_detail_tap_more_info: true,
       option_show_alert_badges: true,
       option_alert_details_collapsed: true,
+      option_highlight_alert_details: false,
       ...config,
       title: undefined,
       sunrise_entity: undefined,
@@ -1859,6 +1877,12 @@ class MeteocatCard extends HTMLElement {
               attrDetails += `<div class="alert-attr"><span class="alert-attr-name">${getTranslation(this._hass, attrKey)}:</span> <span class="alert-attr-value">${displayValue}</span></div>`;
             }
           });
+          const detailStateClass = this._config.option_highlight_alert_details === true
+            ? " alert-detail-item--colored"
+            : this._alertsExpanded && this._selectedAlertKey === key
+              ? " alert-detail-item--highlighted"
+              : "";
+
           activeAlerts.push({
             key,
             name: alertMap[key],
@@ -1871,7 +1895,7 @@ class MeteocatCard extends HTMLElement {
             danger: Number.isFinite(danger) ? danger : 0,
             sortIndex: alertKeys.indexOf(key),
             detailHtml: `
-              <div class="alert-detail-item${this._alertsExpanded && this._selectedAlertKey === key ? " alert-detail-item--highlighted" : ""}" data-alert-key="${key}" id="alert-detail-${key}" tabindex="-1" style="--alert-detail-bg: ${levelMeta.background}; --alert-detail-fg: ${levelMeta.textColor};">
+              <div class="alert-detail-item${detailStateClass}" data-alert-key="${key}" id="alert-detail-${key}" tabindex="-1" style="--alert-detail-bg: ${levelMeta.background}; --alert-detail-fg: ${levelMeta.textColor};">
                 <div class="alert-detail-header">
                   <div class="alert-name">${alertMap[key]}</div>
                   <span class="alert-detail-level" style="--alert-detail-level-color: ${levelMeta.color}; --alert-detail-level-bg: ${levelMeta.background}; --alert-detail-level-fg: ${levelMeta.textColor};">${levelMeta.label}</span>
@@ -2184,12 +2208,12 @@ class MeteocatCard extends HTMLElement {
             .alerts-details[open] .alerts-details-chevron { transform: rotate(180deg); }
             .alerts-details-content { padding-top: 4px; }
             .alert-detail-item { margin-bottom: 10px; padding: 6px 8px; border-radius: 6px; outline: none; transition: background-color 0.2s ease, color 0.2s ease; }
-            .alert-detail-item--highlighted { background-color: var(--alert-detail-bg, var(--secondary-background-color, rgba(127, 127, 127, 0.12))); color: var(--alert-detail-fg, var(--primary-text-color)); }
+            .alert-detail-item--highlighted, .alert-detail-item--colored { background-color: var(--alert-detail-bg, var(--secondary-background-color, rgba(127, 127, 127, 0.12))); color: var(--alert-detail-fg, var(--primary-text-color)); }
             .alert-detail-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
             .alert-name { font-weight: bold; font-size: 1.0em; text-decoration: underline; font-family: sans-serif; }
             .alert-detail-level { flex: 0 0 auto; padding: 1px 8px; border: 2px solid var(--alert-detail-level-color); border-radius: 999px; background: var(--alert-detail-level-bg); color: var(--alert-detail-level-fg); font-size: 0.78em; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; }
             .alert-attr { font-size: 0.9em; color: var(--secondary-text-color); font-family: sans-serif; }
-            .alert-detail-item--highlighted .alert-attr { color: var(--alert-detail-fg, var(--secondary-text-color)); opacity: 0.82; }
+            .alert-detail-item--highlighted .alert-attr, .alert-detail-item--colored .alert-attr { color: var(--alert-detail-fg, var(--secondary-text-color)); opacity: 0.82; }
             .alert-attr-name { font-weight: bold; }
             .alert-attr-value { }
             .attribution { text-align: center; font-size: 0.8em; color: var(--secondary-text-color); padding: 8px 20px; font-family: sans-serif; }
