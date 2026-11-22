@@ -157,7 +157,7 @@ class MeteocatCardEditor extends HTMLElement {
       option_detail_tap_more_info: true,
       option_show_alert_badges: true,
       option_alert_details_collapsed: true,
-      option_highlight_alert_details: false,
+      option_highlight_alert_details: true,
       debug: false,
       ...config,
     };

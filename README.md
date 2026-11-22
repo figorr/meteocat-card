@@ -239,7 +239,7 @@ s-rainy-night.svg
 | `option_detail_tap_more_info` | boolean | `true`                         | Use `false` to disable opening the entity more-info dialog from current metrics, temperature, and feels-like. |
 | `option_show_alert_badges` | boolean | `true`                        | Use `false` to hide the colored SMP danger badges while keeping alert details available. |
 | `option_alert_details_collapsed` | boolean | `true`                  | Use `false` to show alert details expanded by default. |
-| `option_highlight_alert_details` | boolean | `false`                 | Use `true` to color all alert detail blocks by their alert level. |
+| `option_highlight_alert_details` | boolean | `true`                  | Use `false` to highlight only the selected alert instead of coloring every detail block. |
 | `icon_path_type`         | string  | `marketplace`                     | Use `marketplace` or `manual` according to your installation. Legacy `hacs` is migrated automatically. |
 | `iconPath`               | string  | `/local/community/meteocat-card/` | Path to the folder containing the SVG icons.          |
 | `option_show_sun_info`   | boolean | `true`                            | Use `false` to disable sun info sensors.                   |
@@ -267,9 +267,15 @@ Clicking or keyboard-activating a row opens the alert details section and scroll
 
 ![Meteocat Card alert details](images/alerts_details.png)
 
-When there are no active alerts, the same row layout shows a green “No alerts” badge. Alert details are shown inside a collapsible section and are collapsed by default. Set `option_alert_details_collapsed: false` to show them expanded initially, or `option_show_alert_badges: false` to hide the colored badges. Set `option_highlight_alert_details: true` to color every alert detail block by its alert level; in that mode, clicking any badge while the details are open closes them without clearing the colors. The expanded/collapsed state is kept while the card refreshes. The visual editor exposes these settings in the **Alert options** section.
+When there are no active alerts, the same row layout shows a green “No alerts” badge. Alert details are shown inside a collapsible section and are collapsed by default. Set `option_alert_details_collapsed: false` to show them expanded initially, or `option_show_alert_badges: false` to hide the colored badges. By default, every alert detail block is colored by its alert level; in that mode, clicking any badge while the details are open closes them without clearing the colors. Set `option_highlight_alert_details: false` to highlight only the selected alert. The expanded/collapsed state is kept while the card refreshes. The visual editor exposes these settings in the **Alert options** section.
+
+![Meteocat Card alert details highlighted by level](images/alerts_highlighted.png)
 
 ![Meteocat Card alert editor options](images/alerts_editor_options.png)
+
+The same option is available in the code editor:
+
+![Meteocat Card alert options in code editor](images/alerts_code_editor_options.png)
 
 ### Forecast trend chart
 
