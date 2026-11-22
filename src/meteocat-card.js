@@ -805,6 +805,16 @@ class MeteocatCard extends HTMLElement {
     const target = this.shadowRoot.querySelector(`.alert-detail-item[data-alert-key="${alertKey}"]`);
     if (!target) return;
 
+    if (details?.open && this._selectedAlertKey === alertKey) {
+      details.open = false;
+      this._alertsExpanded = false;
+      this._selectedAlertKey = null;
+      this.shadowRoot.querySelectorAll('.alert-detail-item--highlighted').forEach((item) => {
+        item.classList.remove('alert-detail-item--highlighted');
+      });
+      return;
+    }
+
     this._alertsExpanded = true;
     this._selectedAlertKey = alertKey;
     if (details) details.open = true;
