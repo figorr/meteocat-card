@@ -1,3 +1,12 @@
+# [3.8.0](https://github.com/figorr/meteocat-card/compare/v3.7.1...v3.8.0) (2026-11-28)
+
+
+### Features
+
+* add option to highlight all alert details ([0067052](https://github.com/figorr/meteocat-card/commit/0067052627d021d785787695ffc9b57802c062b3))
+* enable alert detail highlighting by default ([873aabf](https://github.com/figorr/meteocat-card/commit/873aabfba1517a0f3e2ffb466f3d7b310ef7a862))
+* toggle alert details from selected badge ([406a853](https://github.com/figorr/meteocat-card/commit/406a85320bd66ab6b9b844cab6397dd50ba59b8d))
+
 ## [3.7.1](https://github.com/figorr/meteocat-card/compare/v3.7.0...v3.7.1) (2026-11-21)
 
 
